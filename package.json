@@ -1,26 +1,30 @@
 {
   "name": "n8n-mcp-workers",
-  "version": "1.0.0",
-  "description": "Multi-tenant n8n MCP server for Cloudflare Workers",
+  "version": "2.0.0",
+  "description": "Multi-tenant n8n MCP SaaS server for Cloudflare Workers",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node stdio-server.js",
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --local --persist",
+    "dev:remote": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "typecheck": "tsc --noEmit",
-    "test:server": "node test-server.js",
-    "test": "node run-tests.js",
-    "test:real": "node test-real.js",
-    "test:comprehensive": "node test-comprehensive.js"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "db:migrate": "wrangler d1 execute n8n-mcp-saas-db --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 execute n8n-mcp-saas-db --local --file=./schema.sql",
+    "setup:local": "bash scripts/setup-local.sh"
   },
   "keywords": [
     "n8n",
     "mcp",
     "cloudflare-workers",
-    "model-context-protocol"
+    "model-context-protocol",
+    "saas"
   ],
   "author": "",
   "license": "MIT",
@@ -30,6 +34,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250117.0",
     "typescript": "^5.7.2",
+    "vitest": "^2.1.9",
     "wrangler": "^4.60.0"
   }
 }
