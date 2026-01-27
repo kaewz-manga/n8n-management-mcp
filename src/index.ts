@@ -1,31 +1,126 @@
 /**
- * n8n MCP Server for Cloudflare Workers
+ * n8n MCP SaaS Server for Cloudflare Workers
  * Multi-tenant n8n automation via Model Context Protocol
  */
 
-// Note: MCP SDK not used for HTTP transport - we implement JSON-RPC directly
-
 import { N8nClient } from './n8n-client';
 import { MCPToolResponse } from './types';
+import { Env, ApiResponse, AuthContext, RateLimitInfo } from './saas-types';
 import { TOOLS } from './tools';
+import {
+  handleRegister,
+  handleLogin,
+  handleCreateConnection,
+  authenticateMcpRequest,
+  verifyAuthToken,
+} from './auth';
+import {
+  getUserById,
+  getConnectionsByUserId,
+  getApiKeysByUserId,
+  deleteConnection,
+  revokeApiKey,
+  getOrCreateMonthlyUsage,
+  incrementMonthlyUsage,
+  logUsage,
+  getPlan,
+  getAllPlans,
+  getCurrentYearMonth,
+  getNextMonthReset,
+  countUserConnections,
+} from './db';
+import { generateApiKey, hashApiKey } from './crypto-utils';
+import { createApiKey as createApiKeyDb } from './db';
 
-/**
- * Extract n8n config from request headers
- */
-function getN8nConfigFromHeaders(request: Request): { apiUrl: string; apiKey: string } {
-  const apiUrl = request.headers.get('X-N8N-URL');
-  const apiKey = request.headers.get('X-N8N-API-KEY');
+// ============================================
+// CORS Headers
+// ============================================
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-N8N-URL, X-N8N-API-KEY',
+};
 
-  if (!apiUrl || !apiKey) {
-    throw new Error('Missing required headers: X-N8N-URL and X-N8N-API-KEY');
-  }
+// ============================================
+// Response Helpers
+// ============================================
 
-  return { apiUrl, apiKey };
+function jsonResponse(data: any, status: number = 200, extraHeaders: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...CORS_HEADERS,
+      ...extraHeaders,
+    },
+  });
 }
 
-/**
- * Handle tool execution
- */
+function apiResponse<T>(data: ApiResponse<T>, status: number = 200, rateLimitInfo?: RateLimitInfo): Response {
+  const headers: Record<string, string> = {};
+
+  if (rateLimitInfo) {
+    headers['X-RateLimit-Limit'] = String(rateLimitInfo.limit);
+    headers['X-RateLimit-Remaining'] = String(rateLimitInfo.remaining);
+    headers['X-RateLimit-Reset'] = rateLimitInfo.reset;
+  }
+
+  return jsonResponse(
+    {
+      ...data,
+      meta: {
+        request_id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+      },
+    },
+    status,
+    headers
+  );
+}
+
+function jsonRpcResponse(id: string | number | null, result: any, rateLimitInfo?: RateLimitInfo): Response {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...CORS_HEADERS,
+  };
+
+  if (rateLimitInfo) {
+    headers['X-RateLimit-Limit'] = String(rateLimitInfo.limit);
+    headers['X-RateLimit-Remaining'] = String(rateLimitInfo.remaining);
+    headers['X-RateLimit-Reset'] = rateLimitInfo.reset;
+  }
+
+  return new Response(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      result,
+    }),
+    { headers }
+  );
+}
+
+function jsonRpcError(id: string | number | null, code: number, message: string): Response {
+  return new Response(
+    JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      error: { code, message },
+    }),
+    {
+      status: code === -32600 ? 400 : 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...CORS_HEADERS,
+      },
+    }
+  );
+}
+
+// ============================================
+// MCP Tool Handler
+// ============================================
+
 async function handleToolCall(
   toolName: string,
   args: any,
@@ -35,7 +130,7 @@ async function handleToolCall(
 
   try {
     switch (toolName) {
-      // ========== Workflow operations ==========
+      // Workflow operations
       case 'n8n_list_workflows':
         result = await client.listWorkflows();
         break;
@@ -67,7 +162,7 @@ async function handleToolCall(
         result = await client.updateWorkflowTags(args.id, args.tags);
         break;
 
-      // ========== Execution operations ==========
+      // Execution operations
       case 'n8n_list_executions':
         result = await client.listExecutions(args.workflowId);
         break;
@@ -81,7 +176,7 @@ async function handleToolCall(
         result = await client.retryExecution(args.id);
         break;
 
-      // ========== Credential operations ==========
+      // Credential operations
       case 'n8n_list_credentials':
         result = await client.listCredentials();
         break;
@@ -98,7 +193,7 @@ async function handleToolCall(
         result = await client.getCredentialSchema(args.credentialType);
         break;
 
-      // ========== Tag operations ==========
+      // Tag operations
       case 'n8n_list_tags':
         result = await client.listTags();
         break;
@@ -115,7 +210,7 @@ async function handleToolCall(
         result = await client.deleteTag(args.id);
         break;
 
-      // ========== Variable operations ==========
+      // Variable operations
       case 'n8n_list_variables':
         result = await client.listVariables();
         break;
@@ -129,7 +224,7 @@ async function handleToolCall(
         result = await client.deleteVariable(args.id);
         break;
 
-      // ========== User operations ==========
+      // User operations
       case 'n8n_list_users':
         result = await client.listUsers();
         break;
@@ -148,172 +243,403 @@ async function handleToolCall(
     }
 
     return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
     };
   } catch (error: any) {
     return {
-      content: [
-        {
-          type: 'text',
-          text: `Error: ${error.message}`,
-        },
-      ],
+      content: [{ type: 'text', text: `Error: ${error.message}` }],
     };
   }
 }
 
-/**
- * CORS headers for all responses
- */
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-N8N-URL, X-N8N-API-KEY',
-};
+// ============================================
+// Management API Routes
+// ============================================
 
-/**
- * Create JSON-RPC 2.0 response
- */
-function jsonRpcResponse(id: string | number | null, result: any): Response {
-  return new Response(
-    JSON.stringify({
-      jsonrpc: '2.0',
-      id,
-      result,
-    }),
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        ...CORS_HEADERS,
+async function handleManagementApi(
+  request: Request,
+  env: Env,
+  path: string
+): Promise<Response> {
+  const method = request.method;
+
+  // Auth endpoints (no auth required)
+  if (path === '/api/auth/register' && method === 'POST') {
+    const body = await request.json() as { email: string; password: string };
+    const result = await handleRegister(env.DB, body.email, body.password);
+    return apiResponse(result, result.success ? 201 : 400);
+  }
+
+  if (path === '/api/auth/login' && method === 'POST') {
+    const body = await request.json() as { email: string; password: string };
+    const result = await handleLogin(env.DB, env.JWT_SECRET, body.email, body.password);
+    return apiResponse(result, result.success ? 200 : 401);
+  }
+
+  // Plans endpoint (public)
+  if (path === '/api/plans' && method === 'GET') {
+    const plans = await getAllPlans(env.DB);
+    return apiResponse({
+      success: true,
+      data: { plans: plans.map(p => ({
+        id: p.id,
+        name: p.name,
+        monthly_request_limit: p.monthly_request_limit,
+        max_connections: p.max_connections,
+        price_monthly: p.price_monthly,
+        features: JSON.parse(p.features || '{}'),
+      }))},
+    });
+  }
+
+  // All other endpoints require JWT auth
+  const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+  if (!authUser) {
+    return apiResponse(
+      {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Invalid or missing token' },
       },
+      401
+    );
+  }
+
+  // GET /api/user/profile
+  if (path === '/api/user/profile' && method === 'GET') {
+    const user = await getUserById(env.DB, authUser.userId);
+    if (!user) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'User not found' } },
+        404
+      );
     }
+    return apiResponse({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        plan: user.plan,
+        status: user.status,
+        created_at: user.created_at,
+      },
+    });
+  }
+
+  // GET /api/connections
+  if (path === '/api/connections' && method === 'GET') {
+    const connections = await getConnectionsByUserId(env.DB, authUser.userId);
+    const apiKeys = await getApiKeysByUserId(env.DB, authUser.userId);
+
+    return apiResponse({
+      success: true,
+      data: {
+        connections: connections.map(c => ({
+          id: c.id,
+          name: c.name,
+          n8n_url: c.n8n_url,
+          status: c.status,
+          created_at: c.created_at,
+          api_keys: apiKeys
+            .filter(k => k.connection_id === c.id)
+            .map(k => ({
+              id: k.id,
+              prefix: k.key_prefix,
+              name: k.name,
+              status: k.status,
+              last_used_at: k.last_used_at,
+              created_at: k.created_at,
+            })),
+        })),
+      },
+    });
+  }
+
+  // POST /api/connections
+  if (path === '/api/connections' && method === 'POST') {
+    const body = await request.json() as { name: string; n8n_url: string; n8n_api_key: string };
+    const result = await handleCreateConnection(
+      env.DB,
+      env.ENCRYPTION_KEY,
+      authUser.userId,
+      authUser.plan,
+      body.name,
+      body.n8n_url,
+      body.n8n_api_key
+    );
+    return apiResponse(result, result.success ? 201 : 400);
+  }
+
+  // DELETE /api/connections/:id
+  const deleteConnectionMatch = path.match(/^\/api\/connections\/([^\/]+)$/);
+  if (deleteConnectionMatch && method === 'DELETE') {
+    const connectionId = deleteConnectionMatch[1];
+    const connections = await getConnectionsByUserId(env.DB, authUser.userId);
+    const connection = connections.find(c => c.id === connectionId);
+
+    if (!connection) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Connection not found' } },
+        404
+      );
+    }
+
+    await deleteConnection(env.DB, connectionId);
+    return apiResponse({ success: true, data: { message: 'Connection deleted' } });
+  }
+
+  // POST /api/connections/:id/api-keys (generate new API key)
+  const newApiKeyMatch = path.match(/^\/api\/connections\/([^\/]+)\/api-keys$/);
+  if (newApiKeyMatch && method === 'POST') {
+    const connectionId = newApiKeyMatch[1];
+    const connections = await getConnectionsByUserId(env.DB, authUser.userId);
+    const connection = connections.find(c => c.id === connectionId);
+
+    if (!connection) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Connection not found' } },
+        404
+      );
+    }
+
+    const body = await request.json().catch(() => ({})) as { name?: string };
+    const { key, hash, prefix } = await generateApiKey();
+    await createApiKeyDb(env.DB, authUser.userId, connectionId, hash, prefix, body.name || 'API Key');
+
+    return apiResponse({
+      success: true,
+      data: {
+        api_key: key,
+        prefix,
+        message: 'Save your API key now. It will not be shown again.',
+      },
+    }, 201);
+  }
+
+  // DELETE /api/api-keys/:id (revoke API key)
+  const revokeKeyMatch = path.match(/^\/api\/api-keys\/([^\/]+)$/);
+  if (revokeKeyMatch && method === 'DELETE') {
+    const keyId = revokeKeyMatch[1];
+    const apiKeys = await getApiKeysByUserId(env.DB, authUser.userId);
+    const apiKey = apiKeys.find(k => k.id === keyId);
+
+    if (!apiKey) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'API key not found' } },
+        404
+      );
+    }
+
+    await revokeApiKey(env.DB, keyId);
+    return apiResponse({ success: true, data: { message: 'API key revoked' } });
+  }
+
+  // GET /api/usage
+  if (path === '/api/usage' && method === 'GET') {
+    const yearMonth = getCurrentYearMonth();
+    const usage = await getOrCreateMonthlyUsage(env.DB, authUser.userId, yearMonth);
+    const plan = await getPlan(env.DB, authUser.plan);
+    const connectionCount = await countUserConnections(env.DB, authUser.userId);
+
+    return apiResponse({
+      success: true,
+      data: {
+        plan: authUser.plan,
+        period: yearMonth,
+        requests: {
+          used: usage.request_count,
+          limit: plan?.monthly_request_limit || 100,
+          remaining: Math.max(0, (plan?.monthly_request_limit || 100) - usage.request_count),
+        },
+        connections: {
+          used: connectionCount,
+          limit: plan?.max_connections || 1,
+        },
+        success_rate: usage.request_count > 0
+          ? Math.round((usage.success_count / usage.request_count) * 100)
+          : 100,
+        reset_at: getNextMonthReset(),
+      },
+    });
+  }
+
+  // Not found
+  return apiResponse(
+    { success: false, error: { code: 'NOT_FOUND', message: 'Endpoint not found' } },
+    404
   );
 }
 
-/**
- * Create JSON-RPC 2.0 error response
- */
-function jsonRpcError(id: string | number | null, code: number, message: string): Response {
-  return new Response(
-    JSON.stringify({
-      jsonrpc: '2.0',
-      id,
-      error: {
-        code,
-        message,
-      },
-    }),
-    {
-      status: code === -32600 ? 400 : 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...CORS_HEADERS,
-      },
+// ============================================
+// MCP Protocol Handler
+// ============================================
+
+async function handleMcpRequest(
+  request: Request,
+  env: Env,
+  authContext: AuthContext
+): Promise<Response> {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonRpcError(null, -32700, 'Parse error: Invalid JSON');
+  }
+
+  const { jsonrpc, id, method, params } = body;
+
+  if (jsonrpc !== '2.0') {
+    return jsonRpcError(id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
+  }
+
+  const rateLimitInfo: RateLimitInfo = {
+    limit: authContext.usage.limit,
+    remaining: authContext.usage.remaining,
+    reset: getNextMonthReset(),
+  };
+
+  try {
+    switch (method) {
+      case 'initialize': {
+        return jsonRpcResponse(
+          id,
+          {
+            protocolVersion: '2024-11-05',
+            capabilities: { tools: {} },
+            serverInfo: {
+              name: 'n8n-mcp-saas',
+              version: '2.0.0',
+            },
+          },
+          rateLimitInfo
+        );
+      }
+
+      case 'notifications/initialized': {
+        return jsonRpcResponse(id, {}, rateLimitInfo);
+      }
+
+      case 'tools/list': {
+        return jsonRpcResponse(id, { tools: TOOLS }, rateLimitInfo);
+      }
+
+      case 'tools/call': {
+        const startTime = Date.now();
+        const { name: toolName, arguments: args } = params;
+
+        // Create n8n client with user's credentials
+        const client = new N8nClient({
+          apiUrl: authContext.connection.n8n_url,
+          apiKey: authContext.connection.n8n_api_key,
+        });
+
+        const result = await handleToolCall(toolName, args || {}, client);
+        const responseTime = Date.now() - startTime;
+
+        // Check if result contains error
+        const isError = result.content[0]?.text?.startsWith('Error:');
+
+        // Log usage
+        const yearMonth = getCurrentYearMonth();
+        await Promise.all([
+          incrementMonthlyUsage(env.DB, authContext.user.id, yearMonth, !isError),
+          logUsage(
+            env.DB,
+            authContext.user.id,
+            authContext.apiKey.id,
+            authContext.connection.id,
+            toolName,
+            isError ? 'error' : 'success',
+            responseTime,
+            isError ? result.content[0]?.text : null
+          ),
+        ]);
+
+        // Update remaining count
+        rateLimitInfo.remaining = Math.max(0, rateLimitInfo.remaining - 1);
+
+        return jsonRpcResponse(id, result, rateLimitInfo);
+      }
+
+      case 'ping': {
+        return jsonRpcResponse(id, {}, rateLimitInfo);
+      }
+
+      default: {
+        return jsonRpcError(id, -32601, `Method not found: ${method}`);
+      }
     }
-  );
+  } catch (error: any) {
+    return jsonRpcError(id, -32603, `Internal error: ${error.message}`);
+  }
 }
 
-/**
- * Cloudflare Workers Fetch Handler
- */
+// ============================================
+// Main Handler
+// ============================================
+
 export default {
-  async fetch(request: Request, env: any, ctx: any): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: CORS_HEADERS });
     }
 
-    // Handle GET request (health check / info)
-    if (request.method === 'GET') {
-      return new Response(
-        JSON.stringify({
-          name: 'n8n-mcp-workers',
-          version: '1.0.0',
-          description: 'Multi-tenant n8n MCP server',
-          status: 'ok',
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...CORS_HEADERS,
-          },
-        }
-      );
+    // Health check
+    if (path === '/' && request.method === 'GET') {
+      return jsonResponse({
+        name: 'n8n-mcp-saas',
+        version: '2.0.0',
+        description: 'Multi-tenant n8n MCP SaaS server',
+        status: 'ok',
+        endpoints: {
+          mcp: '/mcp',
+          api: '/api/*',
+        },
+      });
     }
 
-    let body: any;
-    try {
-      body = await request.json();
-    } catch {
-      return jsonRpcError(null, -32700, 'Parse error: Invalid JSON');
+    // Management API
+    if (path.startsWith('/api/')) {
+      return handleManagementApi(request, env, path);
     }
 
-    const { jsonrpc, id, method, params } = body;
+    // MCP endpoint
+    if (path === '/mcp' && request.method === 'POST') {
+      // Authenticate
+      const { context, error } = await authenticateMcpRequest(request, env);
 
-    // Validate JSON-RPC format
-    if (jsonrpc !== '2.0') {
-      return jsonRpcError(id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
-    }
-
-    try {
-      // Handle MCP methods
-      switch (method) {
-        // ========== Initialize ==========
-        case 'initialize': {
-          return jsonRpcResponse(id, {
-            protocolVersion: '2024-11-05',
-            capabilities: {
-              tools: {},
-            },
-            serverInfo: {
-              name: 'n8n-mcp-workers',
-              version: '1.0.0',
-            },
-          });
-        }
-
-        // ========== Initialized notification ==========
-        case 'notifications/initialized': {
-          // Client notification, no response needed but we send acknowledgment
-          return jsonRpcResponse(id, {});
-        }
-
-        // ========== List Tools ==========
-        case 'tools/list': {
-          return jsonRpcResponse(id, {
-            tools: TOOLS,
-          });
-        }
-
-        // ========== Call Tool ==========
-        case 'tools/call': {
-          // Extract n8n config from headers (only needed for tool calls)
-          const config = getN8nConfigFromHeaders(request);
-          const client = new N8nClient(config);
-
-          const { name, arguments: args } = params;
-          const result = await handleToolCall(name, args || {}, client);
-
-          return jsonRpcResponse(id, result);
-        }
-
-        // ========== Ping ==========
-        case 'ping': {
-          return jsonRpcResponse(id, {});
-        }
-
-        // ========== Unknown method ==========
-        default: {
-          return jsonRpcError(id, -32601, `Method not found: ${method}`);
-        }
+      if (error) {
+        // Return JSON-RPC error for MCP clients
+        return jsonRpcError(null, -32000, error.error?.message || 'Authentication failed');
       }
-    } catch (error: any) {
-      return jsonRpcError(id, -32603, `Internal error: ${error.message}`);
+
+      if (!context) {
+        return jsonRpcError(null, -32000, 'Authentication failed');
+      }
+
+      return handleMcpRequest(request, env, context);
     }
+
+    // Legacy endpoint (for backward compatibility during migration)
+    if (path === '/' && request.method === 'POST') {
+      // Check if using old header-based auth
+      const n8nUrl = request.headers.get('X-N8N-URL');
+      const n8nApiKey = request.headers.get('X-N8N-API-KEY');
+
+      if (n8nUrl && n8nApiKey) {
+        // Legacy mode - direct n8n credentials
+        // This should be deprecated after migration
+        return jsonResponse({
+          error: 'Legacy authentication deprecated. Please use /mcp endpoint with SaaS API key.',
+          migration_guide: 'Register at /api/auth/register, add your n8n at /api/connections, then use the returned API key.',
+        }, 400);
+      }
+    }
+
+    // Not found
+    return jsonResponse({ error: 'Not found' }, 404);
   },
 };
