@@ -34,7 +34,10 @@ import {
   getCurrentYearMonth,
   getNextMonthReset,
   countUserConnections,
+  updateUserPassword,
+  deleteUser,
 } from './db';
+import { hashPassword, verifyPassword } from './crypto-utils';
 import { generateApiKey, hashApiKey } from './crypto-utils';
 import { createApiKey as createApiKeyDb } from './db';
 
@@ -437,7 +440,108 @@ async function handleManagementApi(
         plan: user.plan,
         status: user.status,
         created_at: user.created_at,
+        oauth_provider: user.oauth_provider || null,
       },
+    });
+  }
+
+  // PUT /api/user/password
+  if (path === '/api/user/password' && method === 'PUT') {
+    const body = await request.json() as { current_password: string; new_password: string };
+
+    if (!body.current_password || !body.new_password) {
+      return apiResponse(
+        { success: false, error: { code: 'INVALID_REQUEST', message: 'Current and new password required' } },
+        400
+      );
+    }
+
+    if (body.new_password.length < 8) {
+      return apiResponse(
+        { success: false, error: { code: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters' } },
+        400
+      );
+    }
+
+    const user = await getUserById(env.DB, authUser.userId);
+    if (!user) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'User not found' } },
+        404
+      );
+    }
+
+    // OAuth users can't change password (they don't have one)
+    if (user.oauth_provider && !user.password_hash) {
+      return apiResponse(
+        { success: false, error: { code: 'OAUTH_USER', message: 'OAuth users cannot change password' } },
+        400
+      );
+    }
+
+    // Verify current password
+    const validPassword = await verifyPassword(body.current_password, user.password_hash || '');
+    if (!validPassword) {
+      return apiResponse(
+        { success: false, error: { code: 'INVALID_PASSWORD', message: 'Current password is incorrect' } },
+        401
+      );
+    }
+
+    // Hash new password and update
+    const newHash = await hashPassword(body.new_password);
+    await updateUserPassword(env.DB, authUser.userId, newHash);
+
+    return apiResponse({
+      success: true,
+      data: { message: 'Password updated successfully' },
+    });
+  }
+
+  // DELETE /api/user (delete account)
+  if (path === '/api/user' && method === 'DELETE') {
+    const body = await request.json().catch(() => ({})) as { password?: string; confirm?: boolean };
+
+    const user = await getUserById(env.DB, authUser.userId);
+    if (!user) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'User not found' } },
+        404
+      );
+    }
+
+    // For password users, require password confirmation
+    if (user.password_hash && !user.oauth_provider) {
+      if (!body.password) {
+        return apiResponse(
+          { success: false, error: { code: 'PASSWORD_REQUIRED', message: 'Password required to delete account' } },
+          400
+        );
+      }
+
+      const validPassword = await verifyPassword(body.password, user.password_hash);
+      if (!validPassword) {
+        return apiResponse(
+          { success: false, error: { code: 'INVALID_PASSWORD', message: 'Password is incorrect' } },
+          401
+        );
+      }
+    } else {
+      // For OAuth users, just require confirmation
+      if (!body.confirm) {
+        return apiResponse(
+          { success: false, error: { code: 'CONFIRM_REQUIRED', message: 'Confirmation required to delete account' } },
+          400
+        );
+      }
+    }
+
+    // Delete user (soft delete)
+    await deleteUser(env.DB, authUser.userId);
+
+    return apiResponse({
+      success: true,
+      data: { message: 'Account deleted successfully' },
     });
   }
 

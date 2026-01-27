@@ -14,6 +14,7 @@ export interface User {
   plan: string;
   status: string;
   created_at: string;
+  oauth_provider?: string | null;
 }
 
 export interface Connection {
@@ -177,6 +178,29 @@ export function logout(): void {
 
 export async function getProfile(): Promise<ApiResponse<User>> {
   return request('/api/user/profile');
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<ApiResponse<{ message: string }>> {
+  return request('/api/user/password', {
+    method: 'PUT',
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+}
+
+export async function deleteAccount(
+  password?: string,
+  confirm?: boolean
+): Promise<ApiResponse<{ message: string }>> {
+  return request('/api/user', {
+    method: 'DELETE',
+    body: JSON.stringify({ password, confirm }),
+  });
 }
 
 // ============================================

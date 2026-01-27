@@ -74,6 +74,37 @@ export async function updateUserPlan(
     .run();
 }
 
+export async function updateUserPassword(
+  db: D1Database,
+  userId: string,
+  passwordHash: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+    .bind(passwordHash, new Date().toISOString(), userId)
+    .run();
+}
+
+export async function deleteUser(db: D1Database, userId: string): Promise<void> {
+  // Soft delete - mark as deleted
+  await db
+    .prepare('UPDATE users SET status = ?, updated_at = ? WHERE id = ?')
+    .bind('deleted', new Date().toISOString(), userId)
+    .run();
+
+  // Revoke all API keys
+  await db
+    .prepare('UPDATE api_keys SET status = ? WHERE user_id = ?')
+    .bind('revoked', userId)
+    .run();
+
+  // Mark connections as deleted
+  await db
+    .prepare('UPDATE n8n_connections SET status = ? WHERE user_id = ?')
+    .bind('deleted', userId)
+    .run();
+}
+
 // ============================================
 // n8n Connection Operations
 // ============================================
