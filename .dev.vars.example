@@ -1,0 +1,21 @@
+# Local Development Secrets for Wrangler
+# This file is used by `wrangler dev --local`
+# DO NOT commit this file to version control
+
+# Required: JWT secret for token signing
+JWT_SECRET=dev_jwt_secret_for_local_testing_only_32bytes
+
+# Required: Encryption key for n8n API keys
+ENCRYPTION_KEY=dev_encryption_key_local_testing_32b
+
+# Optional: OAuth (leave empty to disable)
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Frontend URL
+APP_URL=http://localhost:5173
+
+# Environment
+ENVIRONMENT=development
