@@ -150,6 +150,101 @@ curl -X POST http://localhost:8787/mcp \
 
 ---
 
+## Step 9: Setup OAuth (Optional)
+
+### GitHub OAuth
+
+1. Go to https://github.com/settings/developers
+2. Click "New OAuth App"
+3. Fill in:
+   - **Application name**: n8n MCP SaaS
+   - **Homepage URL**: `https://n8n-mcp-dashboard.pages.dev`
+   - **Authorization callback URL**: `https://n8n-mcp-saas.suphakitm99.workers.dev/api/auth/oauth/github/callback`
+4. Copy Client ID and Client Secret
+5. Set secrets:
+
+```bash
+wrangler secret put GITHUB_CLIENT_ID
+# Paste your GitHub OAuth App Client ID
+
+wrangler secret put GITHUB_CLIENT_SECRET
+# Paste your GitHub OAuth App Client Secret
+```
+
+### Google OAuth
+
+1. Go to https://console.cloud.google.com/apis/credentials
+2. Create OAuth 2.0 Client ID (Web application)
+3. Add authorized redirect URI: `https://n8n-mcp-saas.suphakitm99.workers.dev/api/auth/oauth/google/callback`
+4. Copy Client ID and Client Secret
+5. Set secrets:
+
+```bash
+wrangler secret put GOOGLE_CLIENT_ID
+# Paste your Google OAuth Client ID
+
+wrangler secret put GOOGLE_CLIENT_SECRET
+# Paste your Google OAuth Client Secret
+```
+
+### Set APP_URL for OAuth redirects
+
+```bash
+wrangler secret put APP_URL
+# Enter: https://n8n-mcp-dashboard.pages.dev
+```
+
+---
+
+## Step 10: Setup Stripe Billing (Optional)
+
+1. Create a Stripe account at https://stripe.com
+2. Create Products and Prices in Stripe Dashboard:
+   - **Starter**: $9.99/month recurring
+   - **Pro**: $29.99/month recurring
+   - **Enterprise**: $99.99/month recurring
+3. Copy the Price IDs (e.g., `price_xxx`)
+4. Set secrets:
+
+```bash
+wrangler secret put STRIPE_SECRET_KEY
+# Paste your Stripe Secret Key (sk_live_xxx or sk_test_xxx)
+
+wrangler secret put STRIPE_WEBHOOK_SECRET
+# Paste your Stripe Webhook Signing Secret (whsec_xxx)
+
+wrangler secret put STRIPE_PRICE_STARTER
+# Paste Price ID for Starter plan
+
+wrangler secret put STRIPE_PRICE_PRO
+# Paste Price ID for Pro plan
+
+wrangler secret put STRIPE_PRICE_ENTERPRISE
+# Paste Price ID for Enterprise plan
+```
+
+5. Add webhook endpoint in Stripe Dashboard:
+   - URL: `https://n8n-mcp-saas.suphakitm99.workers.dev/api/webhooks/stripe`
+   - Events: `checkout.session.completed`, `customer.subscription.deleted`, `customer.subscription.updated`
+
+---
+
+## Step 11: Deploy Dashboard (Cloudflare Pages)
+
+```bash
+cd dashboard
+
+# Install dependencies
+npm install
+
+# Deploy to Cloudflare Pages
+npm run deploy
+```
+
+The dashboard will be available at: `https://n8n-mcp-dashboard.pages.dev`
+
+---
+
 ## Environment Variables
 
 | Variable | Description | Required |
@@ -157,6 +252,16 @@ curl -X POST http://localhost:8787/mcp \
 | `JWT_SECRET` | Secret for signing JWT tokens | Yes |
 | `ENCRYPTION_KEY` | Secret for encrypting n8n API keys | Yes |
 | `ENVIRONMENT` | Environment name (development/staging/production) | No |
+| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | No |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | No |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | No |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | No |
+| `APP_URL` | Frontend URL for OAuth redirects | No |
+| `STRIPE_SECRET_KEY` | Stripe Secret Key | No |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Webhook Signing Secret | No |
+| `STRIPE_PRICE_STARTER` | Stripe Price ID for Starter plan | No |
+| `STRIPE_PRICE_PRO` | Stripe Price ID for Pro plan | No |
+| `STRIPE_PRICE_ENTERPRISE` | Stripe Price ID for Enterprise plan | No |
 
 ---
 
@@ -210,17 +315,35 @@ wrangler d1 execute n8n-mcp-saas-db --file=./schema.sql
 | POST | `/api/auth/register` | Register new user |
 | POST | `/api/auth/login` | Login user |
 
+### OAuth Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/auth/oauth/providers` | List enabled OAuth providers |
+| GET | `/api/auth/oauth/:provider` | Get OAuth authorize URL |
+| GET | `/api/auth/oauth/:provider/callback` | OAuth callback handler |
+
 ### Protected Endpoints (requires JWT)
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/user/profile` | Get user profile |
+| PUT | `/api/user/password` | Change password |
+| DELETE | `/api/user` | Delete account |
 | GET | `/api/connections` | List n8n connections |
 | POST | `/api/connections` | Add n8n connection |
 | DELETE | `/api/connections/:id` | Delete connection |
 | POST | `/api/connections/:id/api-keys` | Generate new API key |
 | DELETE | `/api/api-keys/:id` | Revoke API key |
 | GET | `/api/usage` | Get usage statistics |
+| POST | `/api/billing/checkout` | Create Stripe checkout session |
+| POST | `/api/billing/portal` | Create Stripe billing portal |
+
+### Webhook Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/webhooks/stripe` | Stripe webhook handler |
 
 ### MCP Endpoint (requires SaaS API key)
 

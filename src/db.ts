@@ -74,6 +74,29 @@ export async function updateUserPlan(
     .run();
 }
 
+export async function updateUserStripeCustomerId(
+  db: D1Database,
+  userId: string,
+  stripeCustomerId: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET stripe_customer_id = ?, updated_at = ? WHERE id = ?')
+    .bind(stripeCustomerId, new Date().toISOString(), userId)
+    .run();
+}
+
+export async function getUserByStripeCustomerId(
+  db: D1Database,
+  stripeCustomerId: string
+): Promise<User | null> {
+  const result = await db
+    .prepare('SELECT * FROM users WHERE stripe_customer_id = ? AND status != ?')
+    .bind(stripeCustomerId, 'deleted')
+    .first<User>();
+
+  return result || null;
+}
+
 export async function updateUserPassword(
   db: D1Database,
   userId: string,

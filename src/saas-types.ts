@@ -12,6 +12,7 @@ export interface User {
   password_hash: string;
   plan: 'free' | 'starter' | 'pro' | 'enterprise';
   status: 'active' | 'suspended' | 'deleted';
+  stripe_customer_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -175,6 +176,13 @@ export interface Env {
 
   // App URL (for OAuth redirect)
   APP_URL?: string;
+
+  // Stripe Billing
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PRICE_STARTER?: string;
+  STRIPE_PRICE_PRO?: string;
+  STRIPE_PRICE_ENTERPRISE?: string;
 
   // Optional
   ENVIRONMENT?: 'development' | 'staging' | 'production';

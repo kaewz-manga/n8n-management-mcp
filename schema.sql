@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     oauth_provider TEXT,  -- 'github', 'google', or NULL for email/password
     oauth_id TEXT,  -- Provider's user ID
     plan TEXT DEFAULT 'free',
+    stripe_customer_id TEXT,
     status TEXT DEFAULT 'active',  -- active, suspended, deleted
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -110,6 +111,7 @@ INSERT OR IGNORE INTO plans (id, name, monthly_request_limit, max_connections, p
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_users_oauth ON users(oauth_provider, oauth_id);
+CREATE INDEX IF NOT EXISTS idx_users_stripe ON users(stripe_customer_id);
 
 CREATE INDEX IF NOT EXISTS idx_n8n_connections_user ON n8n_connections(user_id);
 CREATE INDEX IF NOT EXISTS idx_n8n_connections_status ON n8n_connections(status);

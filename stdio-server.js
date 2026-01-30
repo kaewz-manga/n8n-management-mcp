@@ -2,10 +2,12 @@
 /**
  * n8n MCP Server for Claude Desktop (stdio mode)
  *
- * Usage:
- *   node stdio-server.js <N8N_URL> <N8N_API_KEY>
+ * Usage (SaaS mode):
+ *   node stdio-server.js saas_YOUR_API_KEY
+ *   SAAS_API_KEY=saas_xxx node stdio-server.js
  *
- * Or set environment variables:
+ * Usage (Direct mode):
+ *   node stdio-server.js <N8N_URL> <N8N_API_KEY>
  *   N8N_URL=https://your-n8n.com N8N_API_KEY=your_key node stdio-server.js
  */
 
@@ -16,23 +18,38 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
+const SAAS_URL = 'https://n8n-mcp-saas.suphakitm99.workers.dev';
+
 /**
- * Get n8n config from command line args or environment variables
+ * Get config from command line args or environment variables.
+ * Returns { mode: 'saas', saasApiKey } or { mode: 'direct', apiUrl, apiKey }.
  */
 function getN8nConfig() {
+  // Mode 1: SaaS - single arg starting with saas_ or SAAS_API_KEY env var
+  const saasKey = process.env.SAAS_API_KEY ||
+    (process.argv[2] && process.argv[2].startsWith('saas_') ? process.argv[2] : null);
+
+  if (saasKey) {
+    return { mode: 'saas', saasApiKey: saasKey };
+  }
+
+  // Mode 2: Direct - N8N_URL + N8N_API_KEY
   const apiUrl = process.argv[2] || process.env.N8N_URL;
   const apiKey = process.argv[3] || process.env.N8N_API_KEY;
 
-  if (!apiUrl || !apiKey) {
-    console.error('❌ Error: N8N_URL and N8N_API_KEY required');
-    console.error('\nUsage:');
-    console.error('  node stdio-server.js <N8N_URL> <N8N_API_KEY>');
-    console.error('\nOr use environment variables:');
-    console.error('  N8N_URL=https://your-n8n.com N8N_API_KEY=your_key node stdio-server.js');
-    process.exit(1);
+  if (apiUrl && apiKey) {
+    return { mode: 'direct', apiUrl, apiKey };
   }
 
-  return { apiUrl, apiKey };
+  // Mode 3: Show usage
+  console.error('Error: Missing configuration');
+  console.error('\nUsage (SaaS mode):');
+  console.error('  node stdio-server.js saas_YOUR_API_KEY');
+  console.error('  SAAS_API_KEY=saas_xxx node stdio-server.js');
+  console.error('\nUsage (Direct mode):');
+  console.error('  node stdio-server.js <N8N_URL> <N8N_API_KEY>');
+  console.error('  N8N_URL=https://your-n8n.com N8N_API_KEY=your_key node stdio-server.js');
+  process.exit(1);
 }
 
 /**
@@ -234,6 +251,55 @@ class N8nClient {
       method: 'PATCH',
       body: JSON.stringify({ role }),
     });
+  }
+}
+
+/**
+ * SaaS proxy client - forwards tool calls to the SaaS platform via JSON-RPC 2.0
+ */
+class SaasClient {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.requestId = 0;
+  }
+
+  /**
+   * Send a JSON-RPC 2.0 tools/call request to the SaaS MCP endpoint
+   */
+  async callTool(toolName, args) {
+    this.requestId++;
+
+    const body = {
+      jsonrpc: '2.0',
+      id: this.requestId,
+      method: 'tools/call',
+      params: {
+        name: toolName,
+        arguments: args || {},
+      },
+    };
+
+    const response = await fetch(`${SAAS_URL}/mcp`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`SaaS API Error (${response.status}): ${error}`);
+    }
+
+    const result = await response.json();
+
+    if (result.error) {
+      throw new Error(`SaaS RPC Error (${result.error.code}): ${result.error.message}`);
+    }
+
+    return result.result;
   }
 }
 
@@ -774,9 +840,12 @@ async function handleToolCall(toolName, args, client) {
  * Main server setup
  */
 async function main() {
-  // Get n8n configuration
+  // Get configuration (SaaS or Direct mode)
   const config = getN8nConfig();
-  const client = new N8nClient(config);
+
+  const isSaas = config.mode === 'saas';
+  const n8nClient = isSaas ? null : new N8nClient(config);
+  const saasClient = isSaas ? new SaasClient(config.saasApiKey) : null;
 
   // Create MCP server
   const server = new Server(
@@ -801,7 +870,20 @@ async function main() {
     const { name, arguments: args } = request.params;
 
     try {
-      const result = await handleToolCall(name, args || {}, client);
+      let result;
+
+      if (isSaas) {
+        // SaaS mode: proxy tool call through SaaS platform
+        result = await saasClient.callTool(name, args || {});
+      } else {
+        // Direct mode: call n8n API directly
+        result = await handleToolCall(name, args || {}, n8nClient);
+      }
+
+      // SaaS returns MCP-formatted content directly
+      if (isSaas && result && result.content) {
+        return result;
+      }
 
       return {
         content: [
@@ -828,9 +910,14 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error('🚀 n8n MCP Server running on stdio');
-  console.error(`📡 Connected to: ${config.apiUrl}`);
-  console.error('✅ Ready for Claude Desktop\n');
+  if (isSaas) {
+    console.error('n8n MCP Server running on stdio (SaaS mode)');
+    console.error(`Connected to: ${SAAS_URL}`);
+  } else {
+    console.error('n8n MCP Server running on stdio (Direct mode)');
+    console.error(`Connected to: ${config.apiUrl}`);
+  }
+  console.error('Ready for Claude Desktop\n');
 }
 
 main().catch((error) => {

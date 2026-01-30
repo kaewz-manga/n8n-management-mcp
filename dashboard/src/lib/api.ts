@@ -269,6 +269,25 @@ export async function getPlans(): Promise<ApiResponse<{ plans: Plan[] }>> {
 }
 
 // ============================================
+// Billing API
+// ============================================
+
+export async function createCheckoutSession(
+  planId: string
+): Promise<ApiResponse<{ url: string; session_id: string }>> {
+  return request('/api/billing/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ plan_id: planId }),
+  });
+}
+
+export async function createBillingPortalSession(): Promise<ApiResponse<{ url: string }>> {
+  return request('/api/billing/portal', {
+    method: 'POST',
+  });
+}
+
+// ============================================
 // OAuth API
 // ============================================
 

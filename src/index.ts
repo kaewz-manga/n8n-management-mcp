@@ -40,6 +40,7 @@ import {
 import { hashPassword, verifyPassword } from './crypto-utils';
 import { generateApiKey, hashApiKey } from './crypto-utils';
 import { createApiKey as createApiKeyDb } from './db';
+import { createCheckoutSession, createBillingPortalSession, handleStripeWebhook } from './stripe';
 
 // ============================================
 // CORS Headers
@@ -395,6 +396,11 @@ async function handleManagementApi(
     }
   }
 
+  // Stripe webhook (no auth - signature verified internally)
+  if (path === '/api/webhooks/stripe' && method === 'POST') {
+    return handleStripeWebhook(request, env);
+  }
+
   // Plans endpoint (public)
   if (path === '/api/plans' && method === 'GET') {
     const plans = await getAllPlans(env.DB);
@@ -421,6 +427,39 @@ async function handleManagementApi(
       },
       401
     );
+  }
+
+  // POST /api/billing/checkout - Create Stripe checkout session
+  if (path === '/api/billing/checkout' && method === 'POST') {
+    try {
+      const body = await request.json() as { plan_id: string };
+      if (!body.plan_id) {
+        return apiResponse(
+          { success: false, error: { code: 'INVALID_REQUEST', message: 'plan_id is required' } },
+          400
+        );
+      }
+      const result = await createCheckoutSession(env, authUser.userId, body.plan_id);
+      return apiResponse({ success: true, data: result });
+    } catch (error: any) {
+      return apiResponse(
+        { success: false, error: { code: 'BILLING_ERROR', message: error.message } },
+        400
+      );
+    }
+  }
+
+  // POST /api/billing/portal - Create Stripe billing portal session
+  if (path === '/api/billing/portal' && method === 'POST') {
+    try {
+      const result = await createBillingPortalSession(env, authUser.userId);
+      return apiResponse({ success: true, data: result });
+    } catch (error: any) {
+      return apiResponse(
+        { success: false, error: { code: 'BILLING_ERROR', message: error.message } },
+        400
+      );
+    }
   }
 
   // GET /api/user/profile
