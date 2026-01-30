@@ -2,6 +2,12 @@
 name = "n8n-mcp-saas"
 main = "src/index.ts"
 compatibility_date = "2025-01-26"
+workers_dev = true
+
+# Custom Domain
+routes = [
+  { pattern = "n8n-management-api.node2flow.net", custom_domain = true }
+]
 
 # Observability
 [observability]
