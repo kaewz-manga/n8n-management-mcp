@@ -13,6 +13,7 @@ export interface User {
   email: string;
   plan: string;
   status: string;
+  is_admin?: number;
   created_at: string;
   oauth_provider?: string | null;
 }
@@ -307,4 +308,123 @@ export async function getOAuthUrl(provider: 'github' | 'google'): Promise<ApiRes
 
 export function handleOAuthToken(token: string): void {
   setToken(token);
+}
+
+// ============================================
+// Admin API
+// ============================================
+
+export interface AdminStats {
+  total_users: number;
+  active_users: number;
+  total_requests_today: number;
+  error_rate_today: number;
+  mrr: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  plan: string;
+  status: string;
+  is_admin: number;
+  stripe_customer_id: string | null;
+  oauth_provider: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsageTimeseries {
+  date: string;
+  requests: number;
+  errors: number;
+}
+
+export interface TopTool {
+  tool_name: string;
+  count: number;
+  error_count: number;
+  avg_response_ms: number;
+}
+
+export interface TopUser {
+  user_id: string;
+  email: string;
+  request_count: number;
+}
+
+export interface PlanDist {
+  plan: string;
+  count: number;
+  price_monthly: number;
+}
+
+export interface ErrorLog {
+  id: string;
+  user_id: string;
+  email: string;
+  tool_name: string;
+  error_message: string;
+  response_time_ms: number;
+  created_at: string;
+}
+
+export async function getAdminStats(): Promise<ApiResponse<AdminStats>> {
+  return request('/api/admin/stats');
+}
+
+export async function getAdminUsers(params: {
+  limit?: number;
+  offset?: number;
+  plan?: string;
+  status?: string;
+  search?: string;
+}): Promise<ApiResponse<{ users: AdminUser[]; total: number }>> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set('limit', String(params.limit));
+  if (params.offset) qs.set('offset', String(params.offset));
+  if (params.plan) qs.set('plan', params.plan);
+  if (params.status) qs.set('status', params.status);
+  if (params.search) qs.set('search', params.search);
+  return request(`/api/admin/users?${qs.toString()}`);
+}
+
+export async function getAdminUser(id: string): Promise<ApiResponse<any>> {
+  return request(`/api/admin/users/${id}`);
+}
+
+export async function updateAdminUserPlan(id: string, plan: string): Promise<ApiResponse<any>> {
+  return request(`/api/admin/users/${id}/plan`, { method: 'PUT', body: JSON.stringify({ plan }) });
+}
+
+export async function updateAdminUserStatus(id: string, status: string): Promise<ApiResponse<any>> {
+  return request(`/api/admin/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+}
+
+export async function deleteAdminUser(id: string): Promise<ApiResponse<any>> {
+  return request(`/api/admin/users/${id}`, { method: 'DELETE' });
+}
+
+export async function getAdminUsageTimeseries(days?: number): Promise<ApiResponse<{ timeseries: UsageTimeseries[] }>> {
+  return request(`/api/admin/analytics/usage${days ? `?days=${days}` : ''}`);
+}
+
+export async function getAdminTopTools(days?: number): Promise<ApiResponse<{ tools: TopTool[] }>> {
+  return request(`/api/admin/analytics/tools${days ? `?days=${days}` : ''}`);
+}
+
+export async function getAdminTopUsers(days?: number): Promise<ApiResponse<{ users: TopUser[] }>> {
+  return request(`/api/admin/analytics/top-users${days ? `?days=${days}` : ''}`);
+}
+
+export async function getAdminRevenueOverview(): Promise<ApiResponse<{ mrr: number; plan_distribution: PlanDist[] }>> {
+  return request('/api/admin/revenue/overview');
+}
+
+export async function getAdminErrors(limit?: number): Promise<ApiResponse<{ errors: ErrorLog[] }>> {
+  return request(`/api/admin/health/errors${limit ? `?limit=${limit}` : ''}`);
+}
+
+export async function getAdminErrorTrend(days?: number): Promise<ApiResponse<{ trend: { date: string; count: number }[] }>> {
+  return request(`/api/admin/health/error-trend${days ? `?days=${days}` : ''}`);
 }

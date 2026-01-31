@@ -13,6 +13,7 @@ import {
   handleCreateConnection,
   authenticateMcpRequest,
   verifyAuthToken,
+  verifyAdminToken,
 } from './auth';
 import {
   getOAuthAuthorizeUrl,
@@ -36,6 +37,17 @@ import {
   countUserConnections,
   updateUserPassword,
   deleteUser,
+  getAllUsers,
+  updateUserStatus,
+  adminUpdateUserPlan,
+  logAdminAction,
+  getAdminStats,
+  getUsageTimeseries,
+  getTopTools,
+  getTopUsers,
+  getRecentErrors,
+  getPlanDistribution,
+  getErrorTrend,
 } from './db';
 import { hashPassword, verifyPassword } from './crypto-utils';
 import { generateApiKey, hashApiKey } from './crypto-utils';
@@ -429,6 +441,145 @@ async function handleManagementApi(
     );
   }
 
+  // ============================================
+  // Admin API Endpoints
+  // ============================================
+  if (path.startsWith('/api/admin/')) {
+    const admin = await verifyAdminToken(request, env.JWT_SECRET, env.DB);
+    if (!admin) {
+      return apiResponse(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Admin access required' } },
+        403
+      );
+    }
+
+    // GET /api/admin/stats
+    if (path === '/api/admin/stats' && method === 'GET') {
+      const stats = await getAdminStats(env.DB);
+      return apiResponse({ success: true, data: stats });
+    }
+
+    // GET /api/admin/users
+    if (path === '/api/admin/users' && method === 'GET') {
+      const params = new URL(request.url).searchParams;
+      const result = await getAllUsers(env.DB, {
+        limit: parseInt(params.get('limit') || '20'),
+        offset: parseInt(params.get('offset') || '0'),
+        plan: params.get('plan') || undefined,
+        status: params.get('status') || undefined,
+        search: params.get('search') || undefined,
+      });
+      return apiResponse({ success: true, data: result });
+    }
+
+    // GET /api/admin/users/:id
+    const userDetailMatch = path.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (userDetailMatch && method === 'GET') {
+      const user = await getUserById(env.DB, userDetailMatch[1]);
+      if (!user) {
+        return apiResponse({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } }, 404);
+      }
+      const connections = await getConnectionsByUserId(env.DB, userDetailMatch[1]);
+      const yearMonth = getCurrentYearMonth();
+      const usage = await getOrCreateMonthlyUsage(env.DB, userDetailMatch[1], yearMonth);
+      return apiResponse({
+        success: true,
+        data: {
+          user: { id: user.id, email: user.email, plan: user.plan, status: user.status, is_admin: (user as any).is_admin || 0, created_at: user.created_at },
+          connections: connections.map(c => ({ id: c.id, name: c.name, n8n_url: c.n8n_url, status: c.status, created_at: c.created_at })),
+          usage: { request_count: usage.request_count, success_count: usage.success_count, error_count: usage.error_count },
+        },
+      });
+    }
+
+    // PUT /api/admin/users/:id/plan
+    const planMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/plan$/);
+    if (planMatch && method === 'PUT') {
+      const body = await request.json() as { plan: string };
+      const validPlans = ['free', 'starter', 'pro', 'enterprise'];
+      if (!validPlans.includes(body.plan)) {
+        return apiResponse({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid plan' } }, 400);
+      }
+      await adminUpdateUserPlan(env.DB, planMatch[1], body.plan);
+      await logAdminAction(env.DB, admin.userId, 'change_plan', planMatch[1], { plan: body.plan });
+      return apiResponse({ success: true, data: { message: 'Plan updated' } });
+    }
+
+    // PUT /api/admin/users/:id/status
+    const statusMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/status$/);
+    if (statusMatch && method === 'PUT') {
+      const body = await request.json() as { status: string };
+      if (!['active', 'suspended'].includes(body.status)) {
+        return apiResponse({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid status' } }, 400);
+      }
+      if (statusMatch[1] === admin.userId) {
+        return apiResponse({ success: false, error: { code: 'FORBIDDEN', message: 'Cannot change own status' } }, 403);
+      }
+      await updateUserStatus(env.DB, statusMatch[1], body.status);
+      await logAdminAction(env.DB, admin.userId, 'change_status', statusMatch[1], { status: body.status });
+      return apiResponse({ success: true, data: { message: 'Status updated' } });
+    }
+
+    // DELETE /api/admin/users/:id
+    const deleteMatch = path.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (deleteMatch && method === 'DELETE') {
+      if (deleteMatch[1] === admin.userId) {
+        return apiResponse({ success: false, error: { code: 'FORBIDDEN', message: 'Cannot delete own account' } }, 403);
+      }
+      await deleteUser(env.DB, deleteMatch[1]);
+      await logAdminAction(env.DB, admin.userId, 'delete_user', deleteMatch[1], {});
+      return apiResponse({ success: true, data: { message: 'User deleted' } });
+    }
+
+    // GET /api/admin/analytics/usage
+    if (path === '/api/admin/analytics/usage' && method === 'GET') {
+      const days = parseInt(new URL(request.url).searchParams.get('days') || '30');
+      const timeseries = await getUsageTimeseries(env.DB, days);
+      return apiResponse({ success: true, data: { timeseries } });
+    }
+
+    // GET /api/admin/analytics/tools
+    if (path === '/api/admin/analytics/tools' && method === 'GET') {
+      const params = new URL(request.url).searchParams;
+      const days = parseInt(params.get('days') || '30');
+      const limit = parseInt(params.get('limit') || '10');
+      const tools = await getTopTools(env.DB, days, limit);
+      return apiResponse({ success: true, data: { tools } });
+    }
+
+    // GET /api/admin/analytics/top-users
+    if (path === '/api/admin/analytics/top-users' && method === 'GET') {
+      const params = new URL(request.url).searchParams;
+      const days = parseInt(params.get('days') || '30');
+      const limit = parseInt(params.get('limit') || '10');
+      const users = await getTopUsers(env.DB, days, limit);
+      return apiResponse({ success: true, data: { users } });
+    }
+
+    // GET /api/admin/revenue/overview
+    if (path === '/api/admin/revenue/overview' && method === 'GET') {
+      const distribution = await getPlanDistribution(env.DB);
+      const mrr = distribution.reduce((sum, row) => sum + row.count * row.price_monthly, 0);
+      return apiResponse({ success: true, data: { mrr: Math.round(mrr * 100) / 100, plan_distribution: distribution } });
+    }
+
+    // GET /api/admin/health/errors
+    if (path === '/api/admin/health/errors' && method === 'GET') {
+      const limit = parseInt(new URL(request.url).searchParams.get('limit') || '50');
+      const errors = await getRecentErrors(env.DB, limit);
+      return apiResponse({ success: true, data: { errors } });
+    }
+
+    // GET /api/admin/health/error-trend
+    if (path === '/api/admin/health/error-trend' && method === 'GET') {
+      const days = parseInt(new URL(request.url).searchParams.get('days') || '30');
+      const trend = await getErrorTrend(env.DB, days);
+      return apiResponse({ success: true, data: { trend } });
+    }
+
+    return apiResponse({ success: false, error: { code: 'NOT_FOUND', message: 'Admin endpoint not found' } }, 404);
+  }
+
   // POST /api/billing/checkout - Create Stripe checkout session
   if (path === '/api/billing/checkout' && method === 'POST') {
     try {
@@ -478,6 +629,7 @@ async function handleManagementApi(
         email: user.email,
         plan: user.plan,
         status: user.status,
+        is_admin: (user as any).is_admin || 0,
         created_at: user.created_at,
         oauth_provider: user.oauth_provider || null,
       },
@@ -696,13 +848,16 @@ async function handleManagementApi(
   if (path === '/api/usage' && method === 'GET') {
     const yearMonth = getCurrentYearMonth();
     const usage = await getOrCreateMonthlyUsage(env.DB, authUser.userId, yearMonth);
-    const plan = await getPlan(env.DB, authUser.plan);
+    // Fetch fresh user from DB to get current plan (JWT may have stale plan after Stripe upgrade)
+    const freshUser = await getUserById(env.DB, authUser.userId);
+    const currentPlanId = freshUser?.plan || authUser.plan;
+    const plan = await getPlan(env.DB, currentPlanId);
     const connectionCount = await countUserConnections(env.DB, authUser.userId);
 
     return apiResponse({
       success: true,
       data: {
-        plan: authUser.plan,
+        plan: currentPlanId,
         period: yearMonth,
         requests: {
           used: usage.request_count,

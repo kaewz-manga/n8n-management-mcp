@@ -10,6 +10,12 @@ import Dashboard from './pages/Dashboard';
 import Connections from './pages/Connections';
 import Usage from './pages/Usage';
 import Settings from './pages/Settings';
+import AdminRoute from './components/AdminRoute';
+import AdminOverview from './pages/admin/AdminOverview';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+import AdminRevenue from './pages/admin/AdminRevenue';
+import AdminHealth from './pages/admin/AdminHealth';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -107,6 +113,13 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      {/* Admin routes */}
+      <Route path="/admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
+      <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+      <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+      <Route path="/admin/revenue" element={<AdminRoute><AdminRevenue /></AdminRoute>} />
+      <Route path="/admin/health" element={<AdminRoute><AdminHealth /></AdminRoute>} />
 
       {/* Landing page */}
       <Route

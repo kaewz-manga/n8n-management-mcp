@@ -164,6 +164,7 @@ export async function handleLogin(
       sub: user.id,
       email: user.email,
       plan: user.plan,
+      is_admin: (user as any).is_admin || 0,
     },
     jwtSecret
   );
@@ -176,6 +177,7 @@ export async function handleLogin(
         id: user.id,
         email: user.email,
         plan: user.plan,
+        is_admin: (user as any).is_admin || 0,
       },
     },
   };
@@ -508,7 +510,7 @@ export async function handleCreateConnection(
 export async function verifyAuthToken(
   request: Request,
   jwtSecret: string
-): Promise<{ userId: string; email: string; plan: string } | null> {
+): Promise<{ userId: string; email: string; plan: string; is_admin: number } | null> {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader) return null;
 
@@ -527,5 +529,24 @@ export async function verifyAuthToken(
     userId: payload.sub,
     email: payload.email,
     plan: payload.plan,
+    is_admin: payload.is_admin || 0,
   };
+}
+
+/**
+ * Verify admin access - checks JWT + confirms admin status from DB
+ */
+export async function verifyAdminToken(
+  request: Request,
+  jwtSecret: string,
+  db: D1Database
+): Promise<{ userId: string; email: string } | null> {
+  const authUser = await verifyAuthToken(request, jwtSecret);
+  if (!authUser) return null;
+
+  // Always check DB for current admin status (JWT could be stale)
+  const user = await getUserById(db, authUser.userId);
+  if (!user || (user as any).is_admin !== 1) return null;
+
+  return { userId: user.id, email: user.email };
 }

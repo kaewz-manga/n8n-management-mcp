@@ -6,6 +6,7 @@ import { getProfile, isAuthenticated, logout as apiLogout, clearToken } from '..
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin: user?.is_admin === 1, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

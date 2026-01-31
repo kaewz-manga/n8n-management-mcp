@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     plan TEXT DEFAULT 'free',
     stripe_customer_id TEXT,
     status TEXT DEFAULT 'active',  -- active, suspended, deleted
+    is_admin INTEGER DEFAULT 0,  -- 0 = normal user, 1 = admin
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -106,6 +107,19 @@ INSERT OR IGNORE INTO plans (id, name, monthly_request_limit, max_connections, p
     ('enterprise', 'Enterprise', 100000, -1, 99.99, '{"support": "dedicated", "analytics": true, "sla": true}');
 
 -- ============================================
+-- Admin Audit Logs Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS admin_logs (
+    id TEXT PRIMARY KEY,
+    admin_user_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target_user_id TEXT,
+    details TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (admin_user_id) REFERENCES users(id)
+);
+
+-- ============================================
 -- Indexes for Performance
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -126,3 +140,11 @@ CREATE INDEX IF NOT EXISTS idx_usage_logs_created ON usage_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_usage_logs_api_key ON usage_logs(api_key_id);
 
 CREATE INDEX IF NOT EXISTS idx_usage_monthly_user ON usage_monthly(user_id, year_month);
+
+CREATE INDEX IF NOT EXISTS idx_users_is_admin ON users(is_admin);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_tool ON usage_logs(tool_name);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_status ON usage_logs(status);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_user_created ON usage_logs(user_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_admin_logs_admin ON admin_logs(admin_user_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_created ON admin_logs(created_at);

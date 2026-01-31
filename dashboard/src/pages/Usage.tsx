@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Usage as UsageType, Plan } from '../lib/api';
-import { getUsage, getPlans } from '../lib/api';
+import { getUsage, getPlans, createCheckoutSession } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Activity,
@@ -18,6 +18,7 @@ export default function Usage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -66,6 +67,22 @@ export default function Usage() {
     : 0;
 
   const currentPlan = plans.find((p) => p.id === user?.plan);
+
+  async function handleChangePlan(planId: string) {
+    setCheckoutLoading(planId);
+    try {
+      const res = await createCheckoutSession(planId);
+      if (res.success && res.data?.url) {
+        window.location.href = res.data.url;
+      } else {
+        setError(res.error?.message || 'Failed to create checkout session');
+      }
+    } catch {
+      setError('Failed to connect to billing service');
+    } finally {
+      setCheckoutLoading(null);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -269,13 +286,31 @@ export default function Usage() {
                     Current Plan
                   </button>
                 ) : isUpgrade ? (
-                  <button className="btn-primary w-full">
-                    Upgrade
-                    <ArrowUpRight className="h-4 w-4 ml-1" />
+                  <button
+                    className="btn-primary w-full"
+                    onClick={() => handleChangePlan(plan.id)}
+                    disabled={checkoutLoading === plan.id}
+                  >
+                    {checkoutLoading === plan.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        Upgrade
+                        <ArrowUpRight className="h-4 w-4 ml-1" />
+                      </>
+                    )}
                   </button>
                 ) : (
-                  <button className="btn-secondary w-full">
-                    Downgrade
+                  <button
+                    className="btn-secondary w-full"
+                    onClick={() => handleChangePlan(plan.id)}
+                    disabled={checkoutLoading === plan.id}
+                  >
+                    {checkoutLoading === plan.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Downgrade'
+                    )}
                   </button>
                 )}
               </div>

@@ -397,6 +397,169 @@ export async function getAllPlans(db: D1Database): Promise<Plan[]> {
 }
 
 // ============================================
+// Admin Operations
+// ============================================
+
+export async function getAllUsers(
+  db: D1Database,
+  options: { limit: number; offset: number; plan?: string; status?: string; search?: string }
+): Promise<{ users: any[]; total: number }> {
+  const conditions: string[] = [];
+  const binds: any[] = [];
+
+  if (options.status) {
+    conditions.push('status = ?');
+    binds.push(options.status);
+  }
+  if (options.plan) {
+    conditions.push('plan = ?');
+    binds.push(options.plan);
+  }
+  if (options.search) {
+    conditions.push('email LIKE ?');
+    binds.push(`%${options.search}%`);
+  }
+
+  const where = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
+
+  const countResult = await db
+    .prepare(`SELECT COUNT(*) as total FROM users${where}`)
+    .bind(...binds)
+    .first<{ total: number }>();
+
+  const dataResult = await db
+    .prepare(`SELECT id, email, plan, status, is_admin, stripe_customer_id, oauth_provider, created_at, updated_at FROM users${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+    .bind(...binds, options.limit, options.offset)
+    .all();
+
+  return { users: dataResult.results || [], total: countResult?.total || 0 };
+}
+
+export async function updateUserStatus(db: D1Database, userId: string, status: string): Promise<void> {
+  await db
+    .prepare('UPDATE users SET status = ?, updated_at = ? WHERE id = ?')
+    .bind(status, new Date().toISOString(), userId)
+    .run();
+}
+
+export async function adminUpdateUserPlan(db: D1Database, userId: string, plan: string): Promise<void> {
+  await db
+    .prepare('UPDATE users SET plan = ?, updated_at = ? WHERE id = ?')
+    .bind(plan, new Date().toISOString(), userId)
+    .run();
+}
+
+export async function logAdminAction(
+  db: D1Database,
+  adminUserId: string,
+  action: string,
+  targetUserId: string | null,
+  details: any
+): Promise<void> {
+  const id = generateUUID();
+  await db
+    .prepare('INSERT INTO admin_logs (id, admin_user_id, action, target_user_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(id, adminUserId, action, targetUserId, JSON.stringify(details), new Date().toISOString())
+    .run();
+}
+
+export async function getAdminStats(db: D1Database): Promise<{
+  total_users: number;
+  active_users: number;
+  total_requests_today: number;
+  error_rate_today: number;
+  mrr: number;
+}> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [usersResult, todayUsage, planDistribution] = await Promise.all([
+    db.prepare("SELECT COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active FROM users")
+      .first<{ total: number; active: number }>(),
+    db.prepare(
+      "SELECT COUNT(*) as total, SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors FROM usage_logs WHERE created_at >= ?"
+    ).bind(today).first<{ total: number; errors: number }>(),
+    db.prepare(
+      "SELECT u.plan, COUNT(*) as count, p.price_monthly FROM users u JOIN plans p ON u.plan = p.id WHERE u.status = 'active' GROUP BY u.plan"
+    ).all<{ plan: string; count: number; price_monthly: number }>(),
+  ]);
+
+  const mrr = (planDistribution.results || []).reduce(
+    (sum, row) => sum + row.count * row.price_monthly, 0
+  );
+
+  return {
+    total_users: usersResult?.total || 0,
+    active_users: usersResult?.active || 0,
+    total_requests_today: todayUsage?.total || 0,
+    error_rate_today: todayUsage?.total ? Math.round(((todayUsage?.errors || 0) / todayUsage.total) * 100) : 0,
+    mrr: Math.round(mrr * 100) / 100,
+  };
+}
+
+export async function getUsageTimeseries(
+  db: D1Database,
+  days: number = 30
+): Promise<{ date: string; requests: number; errors: number }[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const result = await db.prepare(
+    "SELECT DATE(created_at) as date, COUNT(*) as requests, SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as errors FROM usage_logs WHERE created_at >= ? GROUP BY DATE(created_at) ORDER BY date"
+  ).bind(since).all<{ date: string; requests: number; errors: number }>();
+  return result.results || [];
+}
+
+export async function getTopTools(
+  db: D1Database,
+  days: number = 30,
+  limit: number = 10
+): Promise<{ tool_name: string; count: number; error_count: number; avg_response_ms: number }[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const result = await db.prepare(
+    "SELECT tool_name, COUNT(*) as count, SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count, AVG(response_time_ms) as avg_response_ms FROM usage_logs WHERE created_at >= ? GROUP BY tool_name ORDER BY count DESC LIMIT ?"
+  ).bind(since, limit).all();
+  return (result.results || []) as any[];
+}
+
+export async function getTopUsers(
+  db: D1Database,
+  days: number = 30,
+  limit: number = 10
+): Promise<{ user_id: string; email: string; request_count: number }[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const result = await db.prepare(
+    "SELECT ul.user_id, u.email, COUNT(*) as request_count FROM usage_logs ul JOIN users u ON ul.user_id = u.id WHERE ul.created_at >= ? GROUP BY ul.user_id ORDER BY request_count DESC LIMIT ?"
+  ).bind(since, limit).all();
+  return (result.results || []) as any[];
+}
+
+export async function getRecentErrors(
+  db: D1Database,
+  limit: number = 50
+): Promise<any[]> {
+  const result = await db.prepare(
+    "SELECT ul.id, ul.user_id, u.email, ul.tool_name, ul.error_message, ul.response_time_ms, ul.created_at FROM usage_logs ul JOIN users u ON ul.user_id = u.id WHERE ul.status = 'error' ORDER BY ul.created_at DESC LIMIT ?"
+  ).bind(limit).all();
+  return result.results || [];
+}
+
+export async function getPlanDistribution(db: D1Database): Promise<{ plan: string; count: number; price_monthly: number }[]> {
+  const result = await db.prepare(
+    "SELECT u.plan, COUNT(*) as count, p.price_monthly FROM users u JOIN plans p ON u.plan = p.id WHERE u.status = 'active' GROUP BY u.plan"
+  ).all();
+  return (result.results || []) as any[];
+}
+
+export async function getErrorTrend(
+  db: D1Database,
+  days: number = 30
+): Promise<{ date: string; count: number }[]> {
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const result = await db.prepare(
+    "SELECT DATE(created_at) as date, COUNT(*) as count FROM usage_logs WHERE status = 'error' AND created_at >= ? GROUP BY DATE(created_at) ORDER BY date"
+  ).bind(since).all();
+  return (result.results || []) as any[];
+}
+
+// ============================================
 // Utility Functions
 // ============================================
 
