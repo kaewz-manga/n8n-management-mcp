@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useConnection } from '../contexts/ConnectionContext';
 import {
   Zap,
   LayoutDashboard,
@@ -12,6 +13,14 @@ import {
   Menu,
   X,
   Shield,
+  Workflow,
+  PlayCircle,
+  Key,
+  Tag,
+  Variable,
+  Users,
+  ChevronDown,
+  Server,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -25,10 +34,21 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
+const n8nNavigation = [
+  { name: 'Workflows', href: '/n8n/workflows', icon: Workflow },
+  { name: 'Executions', href: '/n8n/executions', icon: PlayCircle },
+  { name: 'Credentials', href: '/n8n/credentials', icon: Key },
+  { name: 'Tags', href: '/n8n/tags', icon: Tag },
+  { name: 'Variables', href: '/n8n/variables', icon: Variable },
+  { name: 'Users', href: '/n8n/users', icon: Users },
+];
+
 export default function Layout({ children }: LayoutProps) {
   const { user, logout, isAdmin } = useAuth();
+  const { connections, activeConnection, setActiveConnectionId } = useConnection();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [n8nExpanded, setN8nExpanded] = useState(location.pathname.startsWith('/n8n'));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,6 +101,54 @@ export default function Layout({ children }: LayoutProps) {
                 </Link>
               );
             })}
+            {/* n8n Management */}
+            {connections.length > 0 && (
+              <div className="pt-4 mt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setN8nExpanded(!n8nExpanded)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 w-full"
+                >
+                  <Server className="h-5 w-5" />
+                  <span className="flex-1 text-left">n8n Management</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${n8nExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                {n8nExpanded && (
+                  <div className="mt-1 space-y-0.5">
+                    {/* Connection selector */}
+                    <div className="px-3 py-1.5">
+                      <select
+                        value={activeConnection?.id || ''}
+                        onChange={(e) => setActiveConnectionId(e.target.value)}
+                        className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500"
+                      >
+                        {connections.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {n8nNavigation.map((item) => {
+                      const isActive = location.pathname.startsWith(item.href);
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className={`flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-sm font-medium transition-colors ${
+                            isActive
+                              ? 'bg-orange-50 text-orange-700'
+                              : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {isAdmin && (
               <div className="pt-4 mt-4 border-t border-gray-200">
                 <Link

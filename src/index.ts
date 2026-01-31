@@ -24,6 +24,7 @@ import {
 import {
   getUserById,
   getConnectionsByUserId,
+  getConnectionById,
   getApiKeysByUserId,
   deleteConnection,
   revokeApiKey,
@@ -49,7 +50,7 @@ import {
   getPlanDistribution,
   getErrorTrend,
 } from './db';
-import { hashPassword, verifyPassword } from './crypto-utils';
+import { hashPassword, verifyPassword, decrypt } from './crypto-utils';
 import { generateApiKey, hashApiKey } from './crypto-utils';
 import { createApiKey as createApiKeyDb } from './db';
 import { createCheckoutSession, createBillingPortalSession, handleStripeWebhook } from './stripe';
@@ -578,6 +579,197 @@ async function handleManagementApi(
     }
 
     return apiResponse({ success: false, error: { code: 'NOT_FOUND', message: 'Admin endpoint not found' } }, 404);
+  }
+
+  // ============================================
+  // n8n Proxy API Endpoints (Dashboard → n8n instance)
+  // ============================================
+  if (path.startsWith('/api/n8n/')) {
+    // Resolve connection from X-Connection-Id header
+    const connectionId = request.headers.get('X-Connection-Id');
+    if (!connectionId) {
+      return apiResponse({ success: false, error: { code: 'MISSING_CONNECTION', message: 'X-Connection-Id header required' } }, 400);
+    }
+    const connection = await getConnectionById(env.DB, connectionId);
+    if (!connection || connection.user_id !== authUser.userId || connection.status !== 'active') {
+      return apiResponse({ success: false, error: { code: 'CONNECTION_NOT_FOUND', message: 'Connection not found or inactive' } }, 404);
+    }
+
+    // Check rate limit
+    const freshUser = await getUserById(env.DB, authUser.userId);
+    const currentPlanId = freshUser?.plan || authUser.plan;
+    const userPlan = await getPlan(env.DB, currentPlanId);
+    const monthlyLimit = userPlan?.monthly_request_limit || 100;
+    const yearMonth = getCurrentYearMonth();
+    const currentUsage = await getOrCreateMonthlyUsage(env.DB, authUser.userId, yearMonth);
+    if (currentUsage.request_count >= monthlyLimit) {
+      return apiResponse({ success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Monthly request limit exceeded' } }, 429);
+    }
+
+    let n8nApiKey: string;
+    try {
+      n8nApiKey = await decrypt(connection.n8n_api_key_encrypted, env.ENCRYPTION_KEY);
+    } catch {
+      return apiResponse({ success: false, error: { code: 'DECRYPTION_ERROR', message: 'Failed to decrypt n8n API key' } }, 500);
+    }
+    const client = new N8nClient({ apiUrl: connection.n8n_url, apiKey: n8nApiKey });
+
+    // Helper to execute n8n call with usage logging
+    async function proxyCall(toolName: string, fn: () => Promise<any>) {
+      const start = Date.now();
+      try {
+        const result = await fn();
+        const elapsed = Date.now() - start;
+        await Promise.all([
+          incrementMonthlyUsage(env.DB, authUser.userId, yearMonth, true),
+          logUsage(env.DB, authUser.userId, 'dashboard', connectionId!, toolName, 'success', elapsed, null),
+        ]);
+        return apiResponse({ success: true, data: result });
+      } catch (err: any) {
+        const elapsed = Date.now() - start;
+        await Promise.all([
+          incrementMonthlyUsage(env.DB, authUser.userId, yearMonth, false),
+          logUsage(env.DB, authUser.userId, 'dashboard', connectionId!, toolName, 'error', elapsed, err.message),
+        ]);
+        return apiResponse({ success: false, error: { code: 'N8N_ERROR', message: err.message } }, 502);
+      }
+    }
+
+    const n8nPath = path.replace('/api/n8n', '');
+
+    // --- Workflows ---
+    if (n8nPath === '/workflows' && method === 'GET') {
+      return proxyCall('n8n_list_workflows', () => client.listWorkflows());
+    }
+    if (n8nPath === '/workflows' && method === 'POST') {
+      const body = await request.json();
+      return proxyCall('n8n_create_workflow', () => client.createWorkflow(body));
+    }
+
+    const wfMatch = n8nPath.match(/^\/workflows\/([^/]+)$/);
+    if (wfMatch && method === 'GET') {
+      return proxyCall('n8n_get_workflow', () => client.getWorkflow(wfMatch[1]));
+    }
+    if (wfMatch && method === 'PUT') {
+      const body = await request.json();
+      return proxyCall('n8n_update_workflow', () => client.updateWorkflow(wfMatch[1], body));
+    }
+    if (wfMatch && method === 'DELETE') {
+      return proxyCall('n8n_delete_workflow', () => client.deleteWorkflow(wfMatch[1]));
+    }
+
+    const wfActivate = n8nPath.match(/^\/workflows\/([^/]+)\/activate$/);
+    if (wfActivate && method === 'POST') {
+      return proxyCall('n8n_activate_workflow', () => client.activateWorkflow(wfActivate[1]));
+    }
+    const wfDeactivate = n8nPath.match(/^\/workflows\/([^/]+)\/deactivate$/);
+    if (wfDeactivate && method === 'POST') {
+      return proxyCall('n8n_deactivate_workflow', () => client.deactivateWorkflow(wfDeactivate[1]));
+    }
+    const wfExecute = n8nPath.match(/^\/workflows\/([^/]+)\/execute$/);
+    if (wfExecute && method === 'POST') {
+      const body = await request.json().catch(() => ({})) as any;
+      return proxyCall('n8n_execute_workflow', () => client.executeWorkflow(wfExecute[1], body.data));
+    }
+    const wfTags = n8nPath.match(/^\/workflows\/([^/]+)\/tags$/);
+    if (wfTags && method === 'GET') {
+      return proxyCall('n8n_get_workflow_tags', () => client.getWorkflowTags(wfTags[1]));
+    }
+    if (wfTags && method === 'PUT') {
+      const body = await request.json() as any;
+      return proxyCall('n8n_update_workflow_tags', () => client.updateWorkflowTags(wfTags[1], body.tags));
+    }
+
+    // --- Executions ---
+    if (n8nPath === '/executions' && method === 'GET') {
+      const wfId = new URL(request.url).searchParams.get('workflowId') || undefined;
+      return proxyCall('n8n_list_executions', () => client.listExecutions(wfId));
+    }
+    const execMatch = n8nPath.match(/^\/executions\/([^/]+)$/);
+    if (execMatch && method === 'GET') {
+      return proxyCall('n8n_get_execution', () => client.getExecution(execMatch[1]));
+    }
+    if (execMatch && method === 'DELETE') {
+      return proxyCall('n8n_delete_execution', () => client.deleteExecution(execMatch[1]));
+    }
+    const execRetry = n8nPath.match(/^\/executions\/([^/]+)\/retry$/);
+    if (execRetry && method === 'POST') {
+      return proxyCall('n8n_retry_execution', () => client.retryExecution(execRetry[1]));
+    }
+
+    // --- Credentials ---
+    if (n8nPath === '/credentials' && method === 'POST') {
+      const body = await request.json();
+      return proxyCall('n8n_create_credential', () => client.createCredential(body));
+    }
+    const credMatch = n8nPath.match(/^\/credentials\/([^/]+)$/);
+    if (credMatch && method === 'PATCH') {
+      const body = await request.json();
+      return proxyCall('n8n_update_credential', () => client.updateCredential(credMatch[1], body));
+    }
+    if (credMatch && method === 'DELETE') {
+      return proxyCall('n8n_delete_credential', () => client.deleteCredential(credMatch[1]));
+    }
+    const credSchema = n8nPath.match(/^\/credentials\/schema\/(.+)$/);
+    if (credSchema && method === 'GET') {
+      return proxyCall('n8n_get_credential_schema', () => client.getCredentialSchema(credSchema[1]));
+    }
+
+    // --- Tags ---
+    if (n8nPath === '/tags' && method === 'GET') {
+      return proxyCall('n8n_list_tags', () => client.listTags());
+    }
+    if (n8nPath === '/tags' && method === 'POST') {
+      const body = await request.json() as any;
+      return proxyCall('n8n_create_tag', () => client.createTag(body.name));
+    }
+    const tagMatch = n8nPath.match(/^\/tags\/([^/]+)$/);
+    if (tagMatch && method === 'GET') {
+      return proxyCall('n8n_get_tag', () => client.getTag(tagMatch[1]));
+    }
+    if (tagMatch && method === 'PUT') {
+      const body = await request.json() as any;
+      return proxyCall('n8n_update_tag', () => client.updateTag(tagMatch[1], body.name));
+    }
+    if (tagMatch && method === 'DELETE') {
+      return proxyCall('n8n_delete_tag', () => client.deleteTag(tagMatch[1]));
+    }
+
+    // --- Variables ---
+    if (n8nPath === '/variables' && method === 'GET') {
+      return proxyCall('n8n_list_variables', () => client.listVariables());
+    }
+    if (n8nPath === '/variables' && method === 'POST') {
+      const body = await request.json() as any;
+      return proxyCall('n8n_create_variable', () => client.createVariable(body.key, body.value));
+    }
+    const varMatch = n8nPath.match(/^\/variables\/([^/]+)$/);
+    if (varMatch && method === 'PUT') {
+      const body = await request.json() as any;
+      return proxyCall('n8n_update_variable', () => client.updateVariable(varMatch[1], body.key, body.value));
+    }
+    if (varMatch && method === 'DELETE') {
+      return proxyCall('n8n_delete_variable', () => client.deleteVariable(varMatch[1]));
+    }
+
+    // --- Users ---
+    if (n8nPath === '/users' && method === 'GET') {
+      return proxyCall('n8n_list_users', () => client.listUsers());
+    }
+    const userMatch = n8nPath.match(/^\/users\/([^/]+)$/);
+    if (userMatch && method === 'GET') {
+      return proxyCall('n8n_get_user', () => client.getUser(userMatch[1]));
+    }
+    if (userMatch && method === 'DELETE') {
+      return proxyCall('n8n_delete_user', () => client.deleteUser(userMatch[1]));
+    }
+    const userRole = n8nPath.match(/^\/users\/([^/]+)\/role$/);
+    if (userRole && method === 'PATCH') {
+      const body = await request.json() as any;
+      return proxyCall('n8n_update_user_role', () => client.updateUserRole(userRole[1], body.role));
+    }
+
+    return apiResponse({ success: false, error: { code: 'NOT_FOUND', message: 'n8n endpoint not found' } }, 404);
   }
 
   // POST /api/billing/checkout - Create Stripe checkout session

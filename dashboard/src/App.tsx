@@ -16,6 +16,15 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminRevenue from './pages/admin/AdminRevenue';
 import AdminHealth from './pages/admin/AdminHealth';
+import WorkflowList from './pages/n8n/WorkflowList';
+import WorkflowDetail from './pages/n8n/WorkflowDetail';
+import ExecutionList from './pages/n8n/ExecutionList';
+import ExecutionDetail from './pages/n8n/ExecutionDetail';
+import CredentialList from './pages/n8n/CredentialList';
+import TagList from './pages/n8n/TagList';
+import VariableList from './pages/n8n/VariableList';
+import N8nUserList from './pages/n8n/N8nUserList';
+import { ConnectionProvider } from './contexts/ConnectionContext';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -121,6 +130,16 @@ function AppRoutes() {
       <Route path="/admin/revenue" element={<AdminRoute><AdminRevenue /></AdminRoute>} />
       <Route path="/admin/health" element={<AdminRoute><AdminHealth /></AdminRoute>} />
 
+      {/* n8n Management routes */}
+      <Route path="/n8n/workflows" element={<ProtectedRoute><WorkflowList /></ProtectedRoute>} />
+      <Route path="/n8n/workflows/:id" element={<ProtectedRoute><WorkflowDetail /></ProtectedRoute>} />
+      <Route path="/n8n/executions" element={<ProtectedRoute><ExecutionList /></ProtectedRoute>} />
+      <Route path="/n8n/executions/:id" element={<ProtectedRoute><ExecutionDetail /></ProtectedRoute>} />
+      <Route path="/n8n/credentials" element={<ProtectedRoute><CredentialList /></ProtectedRoute>} />
+      <Route path="/n8n/tags" element={<ProtectedRoute><TagList /></ProtectedRoute>} />
+      <Route path="/n8n/variables" element={<ProtectedRoute><VariableList /></ProtectedRoute>} />
+      <Route path="/n8n/users" element={<ProtectedRoute><N8nUserList /></ProtectedRoute>} />
+
       {/* Landing page */}
       <Route
         path="/"
@@ -142,7 +161,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <ConnectionProvider>
+            <AppRoutes />
+          </ConnectionProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
