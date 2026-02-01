@@ -2,7 +2,7 @@
 
 > Context สำหรับ Claude ตัวใหม่ที่จะทำงานต่อ
 
-**Updated**: 2026-01-31
+**Updated**: 2026-02-02
 **GitHub**: https://github.com/kaewz-manga/n8n-mcp-multi-tanent-v2
 
 ### Production URLs
@@ -11,6 +11,7 @@
 |---------|--------------|-------------------|
 | **MCP Server (Worker)** | https://n8n-management-mcp.node2flow.net | https://n8n-mcp-saas.suphakitm99.workers.dev |
 | **Dashboard (Pages)** | https://n8n-management-dashboard.node2flow.net | https://n8n-mcp-dashboard.pages.dev |
+| **Agent (Vercel)** | https://agent-chi-wine.vercel.app | — |
 
 ---
 
@@ -20,25 +21,44 @@
 
 **Value**: ลูกค้าสมัคร → เพิ่ม n8n instance → ได้ API key `saas_xxx` → ใช้ AI ควบคุม n8n workflows ได้เลย
 
+### Connected Projects
+
+| Project | Repo | Purpose |
+|---------|------|---------|
+| **n8n-mcp-agent** | `n8n-mcp-agent/` | Next.js 15 Chat UI + Dashboard frontend (Vercel) |
+| **n8n-management-mcp** | This repo | CF Worker backend (API + MCP + D1) |
+
+The **n8n-mcp-agent** project is a separate Next.js app that:
+- Provides Chat UI (streaming AI chat with MCP tool calling)
+- Provides alternative Dashboard UI (CRUD for connections, AI connections, bot connections)
+- Calls this Worker via HMAC-SHA256 for AI/bot configs (`/api/agent/config`, `/api/agent/bot-config`)
+- Calls this Worker via JWT for dashboard CRUD
+- Calls this Worker via `saas_` API key for MCP tools
+
 ---
 
-## สถานะปัจจุบัน (2026-01-31)
+## สถานะปัจจุบัน (2026-02-02)
 
 ### ✅ ทำเสร็จ + Deploy แล้ว
 
 - **SaaS Backend** - Auth, Connections, API Keys, Rate Limiting, Usage Tracking
 - **31 MCP Tools** - n8n Public API coverage (Community Edition)
-- **Cloudflare D1** - Database สร้าง + schema apply + `stripe_customer_id` migration แล้ว
-- **Cloudflare KV** - Rate limiting cache
+- **Cloudflare D1** - Database สร้าง + schema apply + migrations แล้ว (9 tables total)
+- **Cloudflare KV** - Rate limiting cache + OAuth state
 - **GitHub Actions** - CI/CD (typecheck + deploy)
 - **E2E Test ผ่าน** - Register → Login → Add Connection → MCP Initialize → list_workflows → list_tags
-- **Dashboard deployed** - React 19 SPA บน Cloudflare Pages
-- **Worker deployed** - Cloudflare Workers v2.0.0
-- **Stripe integration** - `src/stripe.ts` - Checkout session, billing portal, webhook handler (HMAC-SHA256 signature verification)
+- **Dashboard deployed** - React 19 SPA บน Cloudflare Pages (includes Admin pages + n8n UI pages)
+- **Worker deployed** - Cloudflare Workers
+- **Stripe integration** - `src/stripe.ts` - Checkout session, billing portal, webhook handler
 - **OAuth working** - GitHub + Google OAuth login ใช้งานได้ (tested 2026-01-31)
 - **stdio-server.js** - รองรับทั้ง SaaS API key mode (`saas_xxx`) และ Direct n8n mode
 - **Custom domains** - Worker: `n8n-management-mcp.node2flow.net`, Dashboard: `n8n-management-dashboard.node2flow.net`
 - **Monitoring** - Cloudflare Observability enabled
+- **AI Connections** - BYOK AI provider credentials (OpenAI, Anthropic, Google) - CRUD + AES-GCM encryption
+- **Bot Connections** - Telegram/LINE bot management with webhook registration/deregistration
+- **Agent endpoints** - HMAC-SHA256 auth for Vercel agent (`/api/agent/config`, `/api/agent/bot-config`)
+- **Admin panel** - User management, analytics, revenue tracking, health monitoring
+- **n8n-mcp-agent** - Chat UI + Dashboard UI deployed on Vercel (login works, needs deeper testing)
 
 ### ✅ Bug fixes
 
@@ -48,6 +68,15 @@
 - `n8n_list_credentials` returns 405 on Community Edition → Removed tool
 - OAuth `redirect_uri` ใช้ `APP_URL` (Dashboard) แทน Worker origin → Fixed (commit 02fd3fa)
 - Dashboard ส่ง `redirect_uri` ผิด override Worker's callback → Fixed (commit 02fd3fa)
+
+### ⏳ ยังไม่ได้ทดสอบละเอียด
+
+- **n8n-mcp-agent Dashboard CRUD** - Login เข้าได้แล้ว แต่ยังไม่ได้ตรวจสอบ CRUD operations ทั้งหมด
+  - AI connections create/delete
+  - Bot connections create/delete + webhook toggle
+  - n8n connections + API key management
+  - OAuth full flow (GitHub/Google redirect → callback → dashboard)
+- **Stripe billing** - Integration code ready แต่ยัง set secrets ไม่ครบ
 
 ### ⏳ รอ set secrets (ต้องทำ manual)
 
@@ -60,6 +89,10 @@
   - Add webhook endpoint in Stripe Dashboard: `https://n8n-management-mcp.node2flow.net/api/webhooks/stripe`
 
 ดู `docs/DEPLOYMENT.md` Step 10 สำหรับ instructions ละเอียด
+
+### 🎯 Priority: MCP ก่อน
+
+ผู้ใช้ต้องการโฟกัส MCP features ก่อน Dashboard UI testing จะทำทีหลัง
 
 ---
 
@@ -186,7 +219,7 @@ n8n-mcp-workers/
 
 ---
 
-## API Endpoints (18 total)
+## API Endpoints
 
 ### Public (no auth)
 
@@ -218,15 +251,43 @@ n8n-mcp-workers/
 | `/api/connections/:id` | DELETE | Delete connection |
 | `/api/connections/:id/api-keys` | POST | Generate new API key |
 | `/api/api-keys/:id` | DELETE | Revoke API key |
+| `/api/ai-connections` | GET | List AI connections |
+| `/api/ai-connections` | POST | Create AI connection `{ name, provider_url, api_key, model_name }` |
+| `/api/ai-connections/:id` | DELETE | Delete AI connection |
+| `/api/bot-connections` | GET | List bot connections |
+| `/api/bot-connections` | POST | Create bot connection `{ platform, name, bot_token, ... }` |
+| `/api/bot-connections/:id` | DELETE | Delete bot connection |
+| `/api/bot-connections/:id/webhook` | POST | Register webhook → returns URL |
+| `/api/bot-connections/:id/webhook` | DELETE | Deregister webhook |
 | `/api/usage` | GET | Usage statistics (requests, limits, success rate) |
 | `/api/billing/checkout` | POST | Create Stripe checkout session |
 | `/api/billing/portal` | POST | Create Stripe billing portal |
+
+### Agent (HMAC-SHA256 required)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agent/config` | POST | Get AI config `{ user_id, ai_connection_id, signature }` |
+| `/api/agent/bot-config` | POST | Get bot config `{ user_id, platform, signature }` |
 
 ### MCP (SaaS API key required)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/mcp` | POST | MCP JSON-RPC 2.0 (initialize, tools/list, tools/call) |
+
+### Admin (JWT + is_admin required)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/admin/users` | GET | List all users |
+| `/api/admin/stats` | GET | Platform statistics |
+| `/api/admin/analytics/timeseries` | GET | Usage timeseries |
+| `/api/admin/analytics/top-tools` | GET | Most used tools |
+| `/api/admin/analytics/top-users` | GET | Top users by usage |
+| `/api/admin/analytics/errors` | GET | Recent errors |
+| `/api/admin/users/:id/status` | PUT | Update user status |
+| `/api/admin/users/:id/plan` | PUT | Update user plan |
 
 ---
 
@@ -245,16 +306,19 @@ n8n-mcp-workers/
 
 ## Database Schema (D1)
 
-6 tables: `users`, `n8n_connections`, `api_keys`, `usage_logs`, `usage_monthly`, `plans`
+9 tables total (6 core + 3 from migrations):
 
 | Table | Key Fields |
 |-------|------------|
-| **users** | id, email, password_hash, oauth_provider, oauth_id, plan, status, stripe_customer_id |
+| **users** | id, email, password_hash, oauth_provider, oauth_id, plan, status, stripe_customer_id, is_admin |
 | **n8n_connections** | id, user_id, name, n8n_url, n8n_api_key_encrypted, status |
 | **api_keys** | id, user_id, connection_id, key_hash (SHA-256), key_prefix, status |
 | **usage_logs** | id, user_id, api_key_id, connection_id, tool_name, status, response_time_ms |
 | **usage_monthly** | id, user_id, year_month, request_count, success_count, error_count |
 | **plans** | id (free/starter/pro/enterprise), monthly_request_limit, max_connections, price_monthly |
+| **admin_logs** | id, admin_user_id, action, target_user_id, details |
+| **ai_connections** | id, user_id, name, provider_url, api_key_encrypted, model_name, is_default, status |
+| **bot_connections** | id, user_id, platform, name, bot_token_encrypted, channel_secret_encrypted, ai_connection_id, mcp_api_key_encrypted, webhook_active, webhook_url, status |
 
 ---
 
@@ -391,11 +455,20 @@ bf4cad5 Update HANDOFF.md with full SaaS platform status
 
 ## Next Steps
 
-1. **Set Stripe secrets** → สร้าง Stripe account + products + prices → `wrangler secret put` (ดู DEPLOYMENT.md Step 10)
-2. **Update OAuth callbacks** → เปลี่ยน callback URLs ใน GitHub/Google OAuth Apps ให้ตรงกับ custom domain ใหม่
-3. **End-to-end test** → ทดสอบ OAuth login ผ่าน custom domain
-4. **Landing page** → ปรับ Landing.tsx ให้แสดงข้อมูลสินค้าจริง
-5. **Production readiness** → Rate limit tuning, error alerting, backup strategy
+### Priority 1: MCP Features
+- เน้นทำ MCP ให้สมบูรณ์ก่อน (ผู้ใช้ต้องการ)
+
+### Priority 2: Dashboard Testing
+- ทดสอบ n8n-mcp-agent Dashboard CRUD ให้ครบ (login เข้าได้แล้ว)
+- AI connections create/delete
+- Bot connections + webhook toggle
+- n8n connections + API keys
+- OAuth full flow
+
+### Priority 3: Billing & Production
+- Set Stripe secrets → `wrangler secret put` (ดู DEPLOYMENT.md Step 10)
+- Landing page → ปรับ Landing.tsx ให้แสดงข้อมูลจริง
+- Rate limit tuning, error alerting, backup strategy
 
 ---
 
