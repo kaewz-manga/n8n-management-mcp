@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "n8n-mcp-saas"
+name = "n8n-management-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-26"
 workers_dev = true
@@ -16,11 +16,11 @@ enabled = true
 # ============================================
 # D1 Database Binding
 # ============================================
-# Create database: wrangler d1 create n8n-mcp-saas-db
-# Apply schema: wrangler d1 execute n8n-mcp-saas-db --file=./schema.sql
+# D1 database (created as n8n-management-mcp-db, referenced as n8n-management-mcp-db)
+# Apply schema: wrangler d1 execute n8n-management-mcp-db --file=./schema.sql
 [[d1_databases]]
 binding = "DB"
-database_name = "n8n-mcp-saas-db"
+database_name = "n8n-management-mcp-db"
 database_id = "705840e0-4663-430e-9f3b-3778c209e525"
 
 # ============================================
@@ -43,24 +43,3 @@ id = "45d5d994b649440ab34e4f0a3a5eaa66"
 
 [vars]
 ENVIRONMENT = "production"
-
-# ============================================
-# Development Environment
-# ============================================
-[env.dev]
-name = "n8n-mcp-saas-dev"
-
-[env.dev.vars]
-ENVIRONMENT = "development"
-
-# For local development, use:
-# wrangler dev --local --persist
-
-# ============================================
-# Staging Environment
-# ============================================
-[env.staging]
-name = "n8n-mcp-saas-staging"
-
-[env.staging.vars]
-ENVIRONMENT = "staging"

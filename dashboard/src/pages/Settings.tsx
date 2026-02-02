@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { changePassword, deleteAccount } from '../lib/api';
-import { User, Mail, Shield, Trash2, Loader2, Check, AlertCircle, X } from 'lucide-react';
+import { changePassword, deleteAccount, updateSessionDuration } from '../lib/api';
+import { User, Mail, Shield, Trash2, Loader2, Check, AlertCircle, X, Clock } from 'lucide-react';
+
+const SESSION_OPTIONS = [
+  { value: 3600, label: '1 hour' },
+  { value: 86400, label: '24 hours' },
+  { value: 604800, label: '7 days' },
+  { value: 2592000, label: '30 days' },
+];
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
 
   // Password change state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -15,6 +22,11 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  // Session duration state
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [sessionSuccess, setSessionSuccess] = useState(false);
+  const [sessionError, setSessionError] = useState('');
+
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -22,6 +34,23 @@ export default function Settings() {
   const [deleteError, setDeleteError] = useState('');
 
   const isOAuthUser = !!user?.oauth_provider;
+
+  const handleSessionDurationChange = async (seconds: number) => {
+    setSessionError('');
+    setSessionSuccess(false);
+    setSessionLoading(true);
+
+    const res = await updateSessionDuration(seconds);
+    setSessionLoading(false);
+
+    if (res.success) {
+      setSessionSuccess(true);
+      await refreshUser();
+      setTimeout(() => setSessionSuccess(false), 2000);
+    } else {
+      setSessionError(res.error?.message || 'Failed to update session duration');
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +186,46 @@ export default function Settings() {
               </p>
             </div>
           )}
+
+          <div className="pt-4 border-t border-gray-200">
+            <label className="label flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-400" />
+              Session Duration
+            </label>
+            <p className="text-sm text-gray-500 mb-2">
+              How long you stay logged in before needing to sign in again
+            </p>
+
+            {sessionError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-2 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {sessionError}
+              </div>
+            )}
+
+            {sessionSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm mb-2 flex items-center gap-2">
+                <Check className="h-4 w-4" />
+                Session duration updated
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <select
+                className="input w-48"
+                value={user?.session_duration_seconds || 86400}
+                onChange={(e) => handleSessionDurationChange(Number(e.target.value))}
+                disabled={sessionLoading}
+              >
+                {SESSION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {sessionLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+            </div>
+          </div>
 
           <div className="pt-4 border-t border-gray-200">
             <label className="label">Active Sessions</label>

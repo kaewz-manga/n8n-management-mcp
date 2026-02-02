@@ -13,6 +13,7 @@ export interface User {
   plan: 'free' | 'starter' | 'pro' | 'enterprise';
   status: 'active' | 'suspended' | 'deleted';
   stripe_customer_id: string | null;
+  session_duration_seconds: number;
   created_at: string;
   updated_at: string;
 }

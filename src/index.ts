@@ -59,8 +59,9 @@ import {
   getBotConnectionByUserAndPlatform,
   updateBotConnectionWebhook,
   deleteBotConnection,
+  updateSessionDuration,
 } from './db';
-import { hashPassword, verifyPassword, decrypt, encrypt } from './crypto-utils';
+import { hashPassword, verifyPassword, decrypt, encrypt, generateJWT } from './crypto-utils';
 import { generateApiKey, hashApiKey } from './crypto-utils';
 import { createApiKey as createApiKeyDb } from './db';
 import { createCheckoutSession, createBillingPortalSession, handleStripeWebhook } from './stripe';
@@ -1045,9 +1046,42 @@ async function handleManagementApi(
         plan: user.plan,
         status: user.status,
         is_admin: (user as any).is_admin || 0,
+        session_duration_seconds: (user as any).session_duration_seconds || 86400,
         created_at: user.created_at,
         oauth_provider: user.oauth_provider || null,
       },
+    });
+  }
+
+  // PUT /api/user/session-duration
+  if (path === '/api/user/session-duration' && method === 'PUT') {
+    const body = await request.json() as { duration: number };
+    const validDurations = [3600, 86400, 604800, 2592000];
+
+    if (!validDurations.includes(body.duration)) {
+      return apiResponse(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'Duration must be 3600, 86400, 604800, or 2592000 seconds' } },
+        400
+      );
+    }
+
+    await updateSessionDuration(env.DB, authUser.userId, body.duration);
+
+    // Issue new JWT with updated duration
+    const token = await generateJWT(
+      {
+        sub: authUser.userId,
+        email: authUser.email,
+        plan: authUser.plan,
+        is_admin: authUser.is_admin,
+      },
+      env.JWT_SECRET,
+      body.duration
+    );
+
+    return apiResponse({
+      success: true,
+      data: { message: 'Session duration updated', token, duration: body.duration },
     });
   }
 

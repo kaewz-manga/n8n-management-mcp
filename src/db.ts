@@ -42,6 +42,8 @@ export async function createUser(
     password_hash: passwordHash,
     plan: 'free',
     status: 'active',
+    stripe_customer_id: null,
+    session_duration_seconds: 86400,
     created_at: now,
     updated_at: now,
   };
@@ -107,6 +109,17 @@ export async function updateUserPassword(
   await db
     .prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
     .bind(passwordHash, new Date().toISOString(), userId)
+    .run();
+}
+
+export async function updateSessionDuration(
+  db: D1Database,
+  userId: string,
+  seconds: number
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET session_duration_seconds = ?, updated_at = ? WHERE id = ?')
+    .bind(seconds, new Date().toISOString(), userId)
     .run();
 }
 

@@ -286,14 +286,16 @@ export async function handleOAuthCallback(
     };
   }
 
-  // Generate JWT
+  // Generate JWT with user's session duration preference
+  const expiresIn = (user as any).session_duration_seconds || 86400;
   const token = await generateJWT(
     {
       sub: user.id,
       email: user.email,
       plan: user.plan,
     },
-    env.JWT_SECRET
+    env.JWT_SECRET,
+    expiresIn
   );
 
   return {

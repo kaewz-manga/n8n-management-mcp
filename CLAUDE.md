@@ -133,8 +133,8 @@ Key relationships:
 
 | Resource | ID/Name |
 |----------|---------|
-| Worker | `n8n-mcp-saas` |
-| D1 Database | `705840e0-4663-430e-9f3b-3778c209e525` (n8n-mcp-saas-db, APAC/SIN) |
+| Worker | `n8n-management-mcp` |
+| D1 Database | `705840e0-4663-430e-9f3b-3778c209e525` (n8n-management-mcp-db, APAC/SIN) |
 | KV Namespace | `45d5d994b649440ab34e4f0a3a5eaa66` (RATE_LIMIT_KV) |
 | Pages | `n8n-mcp-dashboard` |
 
@@ -186,8 +186,8 @@ npm run build                # Build
 npm run deploy               # Build + deploy to Cloudflare Pages
 
 # Database
-npx wrangler d1 execute n8n-mcp-saas-db --remote --file=./schema.sql
-npx wrangler d1 execute n8n-mcp-saas-db --remote --command "SELECT ..."
+npx wrangler d1 execute n8n-management-mcp-db --remote --file=./schema.sql
+npx wrangler d1 execute n8n-management-mcp-db --remote --command "SELECT ..."
 
 # Secrets
 wrangler secret put SECRET_NAME

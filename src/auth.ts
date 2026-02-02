@@ -158,7 +158,8 @@ export async function handleLogin(
     };
   }
 
-  // Generate JWT
+  // Generate JWT with user's session duration preference
+  const expiresIn = (user as any).session_duration_seconds || 86400;
   const token = await generateJWT(
     {
       sub: user.id,
@@ -166,7 +167,8 @@ export async function handleLogin(
       plan: user.plan,
       is_admin: (user as any).is_admin || 0,
     },
-    jwtSecret
+    jwtSecret,
+    expiresIn
   );
 
   return {

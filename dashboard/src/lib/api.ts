@@ -14,6 +14,7 @@ export interface User {
   plan: string;
   status: string;
   is_admin?: number;
+  session_duration_seconds?: number;
   created_at: string;
   oauth_provider?: string | null;
 }
@@ -202,6 +203,25 @@ export async function deleteAccount(
     method: 'DELETE',
     body: JSON.stringify({ password, confirm }),
   });
+}
+
+export async function updateSessionDuration(
+  duration: number
+): Promise<ApiResponse<{ message: string; token: string; duration: number }>> {
+  const response = await request<{ message: string; token: string; duration: number }>(
+    '/api/user/session-duration',
+    {
+      method: 'PUT',
+      body: JSON.stringify({ duration }),
+    }
+  );
+
+  // Update token in localStorage if a new one was returned
+  if (response.success && response.data?.token) {
+    setToken(response.data.token);
+  }
+
+  return response;
 }
 
 // ============================================
