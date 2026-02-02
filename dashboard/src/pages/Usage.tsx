@@ -48,16 +48,16 @@ export default function Usage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-n2f-accent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+      <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 flex items-center gap-3">
         <AlertCircle className="h-5 w-5 text-red-500" />
-        <span className="text-red-700">{error}</span>
+        <span className="text-red-300">{error}</span>
       </div>
     );
   }
@@ -88,21 +88,21 @@ export default function Usage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Usage & Billing</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-n2f-text">Usage & Billing</h1>
+        <p className="text-n2f-text-secondary mt-1">
           Monitor your API usage and manage your subscription
         </p>
       </div>
 
       {/* Current Plan Card */}
-      <div className="card bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+      <div className="card bg-gradient-to-br from-n2f-accent to-amber-600 text-gray-900">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-blue-100 text-sm">Current Plan</p>
+            <p className="text-n2f-text-secondary text-sm">Current Plan</p>
             <h2 className="text-3xl font-bold capitalize mt-1">
               {currentPlan?.name || user?.plan}
             </h2>
-            <p className="text-blue-100 mt-2">
+            <p className="text-n2f-text-secondary mt-2">
               {currentPlan?.monthly_request_limit.toLocaleString()} requests/month
               {' • '}
               {currentPlan?.max_connections === -1
@@ -114,7 +114,7 @@ export default function Usage() {
           <div className="text-right">
             <p className="text-4xl font-bold">
               ${currentPlan?.price_monthly || 0}
-              <span className="text-lg font-normal text-blue-200">/mo</span>
+              <span className="text-lg font-normal text-n2f-text-secondary">/mo</span>
             </p>
           </div>
         </div>
@@ -124,27 +124,27 @@ export default function Usage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Activity className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-n2f-accent/10 rounded-lg">
+              <Activity className="h-5 w-5 text-n2f-accent" />
             </div>
-            <span className="text-sm font-medium text-gray-500">
+            <span className="text-sm font-medium text-n2f-text-secondary">
               Requests This Month
             </span>
           </div>
           <p className="stat-value">
             {usage?.requests.used.toLocaleString()}
-            <span className="text-lg font-normal text-gray-400">
+            <span className="text-lg font-normal text-n2f-text-muted">
               /{usage?.requests.limit.toLocaleString()}
             </span>
           </p>
-          <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="mt-3 h-2 bg-n2f-border rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full ${
                 usagePercent >= 90
-                  ? 'bg-red-500'
+                  ? 'bg-red-400'
                   : usagePercent >= 70
-                  ? 'bg-yellow-500'
-                  : 'bg-blue-500'
+                  ? 'bg-amber-400'
+                  : 'bg-n2f-accent'
               }`}
               style={{ width: `${Math.min(usagePercent, 100)}%` }}
             />
@@ -153,32 +153,32 @@ export default function Usage() {
 
         <div className="stat-card">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+            <div className="p-2 bg-emerald-900/30 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-emerald-400" />
             </div>
-            <span className="text-sm font-medium text-gray-500">
+            <span className="text-sm font-medium text-n2f-text-secondary">
               Success Rate
             </span>
           </div>
           <p className="stat-value">{usage?.success_rate || 100}%</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-n2f-text-secondary mt-1">
             All time success rate
           </p>
         </div>
 
         <div className="stat-card">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Calendar className="h-5 w-5 text-purple-600" />
+            <div className="p-2 bg-purple-900/30 rounded-lg">
+              <Calendar className="h-5 w-5 text-purple-400" />
             </div>
-            <span className="text-sm font-medium text-gray-500">
+            <span className="text-sm font-medium text-n2f-text-secondary">
               Billing Period
             </span>
           </div>
-          <p className="text-xl font-semibold text-gray-900">
+          <p className="text-xl font-semibold text-n2f-text">
             {usage?.period}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-n2f-text-secondary mt-1">
             Resets{' '}
             {usage?.reset_at
               ? new Date(usage.reset_at).toLocaleDateString()
@@ -192,19 +192,19 @@ export default function Usage() {
         <div
           className={`rounded-lg p-4 flex items-start gap-3 ${
             usagePercent >= 90
-              ? 'bg-red-50 border border-red-200'
-              : 'bg-yellow-50 border border-yellow-200'
+              ? 'bg-red-900/30 border border-red-700'
+              : 'bg-amber-900/30 border border-amber-700'
           }`}
         >
           <AlertCircle
             className={`h-5 w-5 mt-0.5 ${
-              usagePercent >= 90 ? 'text-red-500' : 'text-yellow-500'
+              usagePercent >= 90 ? 'text-red-500' : 'text-amber-500'
             }`}
           />
           <div>
             <p
               className={`font-medium ${
-                usagePercent >= 90 ? 'text-red-800' : 'text-yellow-800'
+                usagePercent >= 90 ? 'text-red-300' : 'text-amber-400'
               }`}
             >
               {usagePercent >= 90
@@ -213,7 +213,7 @@ export default function Usage() {
             </p>
             <p
               className={`text-sm mt-1 ${
-                usagePercent >= 90 ? 'text-red-700' : 'text-yellow-700'
+                usagePercent >= 90 ? 'text-red-300' : 'text-n2f-text-secondary'
               }`}
             >
               You've used {usagePercent}% of your monthly quota. Consider
@@ -225,7 +225,7 @@ export default function Usage() {
 
       {/* Plans */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-n2f-text mb-4">
           Available Plans
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -242,11 +242,11 @@ export default function Usage() {
               <div
                 key={plan.id}
                 className={`card relative ${
-                  isCurrent ? 'border-blue-500 border-2' : ''
+                  isCurrent ? 'border-n2f-accent border-2' : ''
                 } ${isBlurred ? 'blur-sm select-none pointer-events-none' : ''}`}
               >
                 {isCurrent && (
-                  <span className="absolute -top-3 left-4 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                  <span className="absolute -top-3 left-4 bg-n2f-accent text-gray-900 text-xs px-2 py-1 rounded-full">
                     Current
                   </span>
                 )}
@@ -254,31 +254,31 @@ export default function Usage() {
                 <div className="flex items-center gap-2 mb-2">
                   <Zap
                     className={`h-5 w-5 ${
-                      isCurrent ? 'text-blue-600' : 'text-gray-400'
+                      isCurrent ? 'text-n2f-accent' : 'text-n2f-text-muted'
                     }`}
                   />
-                  <h3 className="font-semibold text-gray-900">{plan.name}</h3>
+                  <h3 className="font-semibold text-n2f-text">{plan.name}</h3>
                 </div>
 
-                <p className="text-3xl font-bold text-gray-900 mb-4">
+                <p className="text-3xl font-bold text-n2f-text mb-4">
                   {!isAdmin && !isFree ? '$xx.xx' : `$${plan.price_monthly}`}
-                  <span className="text-sm font-normal text-gray-500">/mo</span>
+                  <span className="text-sm font-normal text-n2f-text-secondary">/mo</span>
                 </p>
 
-                <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                <ul className="space-y-2 text-sm text-n2f-text-secondary mb-6">
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                    <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
                     {plan.monthly_request_limit.toLocaleString()} requests/month
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                    <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
                     {plan.max_connections === -1
                       ? 'Unlimited'
                       : plan.max_connections}{' '}
                     connections
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                    <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
                     {plan.features?.support || 'Community'} support
                   </li>
                 </ul>

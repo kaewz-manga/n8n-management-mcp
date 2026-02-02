@@ -161,20 +161,20 @@ export default function WorkflowList() {
     setSelectedTagIds(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
   }
 
-  if (!activeConnection) return <div className="text-center py-12 text-gray-500">Select a connection from the sidebar to manage workflows.</div>;
+  if (!activeConnection) return <div className="text-center py-12 text-n2f-text-secondary">Select a connection from the sidebar to manage workflows.</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
-          <p className="text-gray-500 mt-1">{activeConnection.name} - {workflows.length} workflows</p>
+          <h1 className="text-2xl font-bold text-n2f-text">Workflows</h1>
+          <p className="text-n2f-text-secondary mt-1">{activeConnection.name} - {workflows.length} workflows</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowCreate(!showCreate)} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={() => setShowCreate(!showCreate)} className="flex items-center gap-2 px-4 py-2 text-sm bg-n2f-accent text-white rounded-lg hover:bg-n2f-accent/90">
             <Plus className="h-4 w-4" /> Create
           </button>
-          <button onClick={fetchList} className="p-2 border rounded-lg hover:bg-gray-100" title="Refresh">
+          <button onClick={fetchList} className="p-2 border border-n2f-border rounded-lg hover:bg-n2f-elevated" title="Refresh">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
@@ -182,91 +182,91 @@ export default function WorkflowList() {
 
       {/* Create form */}
       {showCreate && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <div className="bg-n2f-card border border-n2f-border rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-medium text-gray-900">Create Workflow</h3>
-            <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+            <h3 className="font-medium text-n2f-text">Create Workflow</h3>
+            <button onClick={() => setShowCreate(false)} className="text-n2f-text-muted hover:text-n2f-text-secondary"><X className="h-4 w-4" /></button>
           </div>
           <textarea
             value={createJson}
             onChange={(e) => setCreateJson(e.target.value)}
             rows={12}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm border border-n2f-border rounded-lg font-mono focus:ring-2 focus:ring-n2f-accent bg-n2f-elevated text-n2f-text"
           />
-          <button onClick={handleCreate} disabled={creating} className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+          <button onClick={handleCreate} disabled={creating} className="flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create Workflow
           </button>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+        <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-red-500" />
-          <span className="text-red-700 text-sm">{error}</span>
+          <span className="text-red-300 text-sm">{error}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-n2f-accent" /></div>
       ) : (
         <div className="space-y-2">
           {workflows.map((wf) => (
-            <div key={wf.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div key={wf.id} className="bg-n2f-card border border-n2f-border rounded-lg overflow-hidden">
               {/* Row */}
-              <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                <button onClick={() => loadDetail(wf.id)} className="text-gray-400">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-n2f-elevated">
+                <button onClick={() => loadDetail(wf.id)} className="text-n2f-text-muted">
                   {expandedId === wf.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </button>
-                <button onClick={() => loadDetail(wf.id)} className="flex-1 text-left text-sm font-medium text-gray-900 hover:text-blue-600">
+                <button onClick={() => loadDetail(wf.id)} className="flex-1 text-left text-sm font-medium text-n2f-text hover:text-n2f-accent">
                   {wf.name}
                 </button>
-                <span className="text-xs text-gray-400 font-mono hidden sm:block">{wf.id}</span>
-                <span className="text-xs text-gray-400 hidden md:block">{wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : ''}</span>
+                <span className="text-xs text-n2f-text-muted font-mono hidden sm:block">{wf.id}</span>
+                <span className="text-xs text-n2f-text-muted hidden md:block">{wf.updatedAt ? new Date(wf.updatedAt).toLocaleDateString() : ''}</span>
                 <button onClick={() => handleToggle(wf)} title={wf.active ? 'Deactivate' : 'Activate'}>
                   <StatusBadge status={wf.active ? 'active' : 'inactive'} />
                 </button>
-                <button onClick={() => handleExecute(wf.id)} disabled={executing === wf.id} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Execute">
+                <button onClick={() => handleExecute(wf.id)} disabled={executing === wf.id} className="p-1.5 text-emerald-400 hover:bg-emerald-900/30 rounded" title="Execute">
                   {executing === wf.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 </button>
-                <button onClick={() => setDeleteTarget(wf)} className="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Delete">
+                <button onClick={() => setDeleteTarget(wf)} className="p-1.5 text-red-400 hover:bg-red-900/30 rounded" title="Delete">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
 
               {/* Expanded detail */}
               {expandedId === wf.id && (
-                <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-4">
+                <div className="border-t border-n2f-border bg-n2f-elevated p-4 space-y-4">
                   {detailLoading ? (
-                    <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-blue-600" /></div>
+                    <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-n2f-accent" /></div>
                   ) : detail ? (
                     <>
                       {/* Info cards */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="bg-white rounded-lg border p-3">
-                          <p className="text-xs text-gray-500">Status</p>
+                        <div className="bg-n2f-card rounded-lg border border-n2f-border p-3">
+                          <p className="text-xs text-n2f-text-secondary">Status</p>
                           <StatusBadge status={detail.active ? 'active' : 'inactive'} />
                         </div>
-                        <div className="bg-white rounded-lg border p-3">
-                          <p className="text-xs text-gray-500">Nodes</p>
-                          <p className="text-sm font-medium">{detail.nodes?.length || 0}</p>
+                        <div className="bg-n2f-card rounded-lg border border-n2f-border p-3">
+                          <p className="text-xs text-n2f-text-secondary">Nodes</p>
+                          <p className="text-sm font-medium text-n2f-text">{detail.nodes?.length || 0}</p>
                         </div>
-                        <div className="bg-white rounded-lg border p-3">
-                          <p className="text-xs text-gray-500">Created</p>
-                          <p className="text-sm font-medium">{detail.createdAt ? new Date(detail.createdAt).toLocaleString() : '-'}</p>
+                        <div className="bg-n2f-card rounded-lg border border-n2f-border p-3">
+                          <p className="text-xs text-n2f-text-secondary">Created</p>
+                          <p className="text-sm font-medium text-n2f-text">{detail.createdAt ? new Date(detail.createdAt).toLocaleString() : '-'}</p>
                         </div>
-                        <div className="bg-white rounded-lg border p-3">
-                          <p className="text-xs text-gray-500">Updated</p>
-                          <p className="text-sm font-medium">{detail.updatedAt ? new Date(detail.updatedAt).toLocaleString() : '-'}</p>
+                        <div className="bg-n2f-card rounded-lg border border-n2f-border p-3">
+                          <p className="text-xs text-n2f-text-secondary">Updated</p>
+                          <p className="text-sm font-medium text-n2f-text">{detail.updatedAt ? new Date(detail.updatedAt).toLocaleString() : '-'}</p>
                         </div>
                       </div>
 
                       {/* Tags */}
-                      <div className="bg-white rounded-lg border p-3">
+                      <div className="bg-n2f-card rounded-lg border border-n2f-border p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <Tag className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm font-medium text-gray-700">Tags</span>
+                          <Tag className="h-4 w-4 text-n2f-text-muted" />
+                          <span className="text-sm font-medium text-n2f-text-secondary">Tags</span>
                           {!editingTags && (
-                            <button onClick={startEditTags} className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1">
+                            <button onClick={startEditTags} className="ml-auto text-xs text-n2f-accent hover:underline flex items-center gap-1">
                               <Pencil className="h-3 w-3" /> Edit
                             </button>
                           )}
@@ -280,42 +280,42 @@ export default function WorkflowList() {
                                   onClick={() => toggleTagId(String(t.id))}
                                   className={`px-2 py-1 text-xs rounded-full border transition-colors ${
                                     selectedTagIds.includes(String(t.id))
-                                      ? 'bg-blue-100 text-blue-700 border-blue-300'
-                                      : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                                      ? 'bg-n2f-accent/10 text-n2f-accent border-n2f-accent/30'
+                                      : 'bg-n2f-elevated text-n2f-text-secondary border-n2f-border hover:border-n2f-accent/30'
                                   }`}
                                 >
                                   {t.name}
                                 </button>
                               ))}
-                              {allTags.length === 0 && <span className="text-xs text-gray-400">No tags available</span>}
+                              {allTags.length === 0 && <span className="text-xs text-n2f-text-muted">No tags available</span>}
                             </div>
                             <div className="flex gap-2">
-                              <button onClick={handleSaveTags} disabled={savingTags} className="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                              <button onClick={handleSaveTags} disabled={savingTags} className="px-3 py-1 text-xs bg-n2f-accent text-white rounded-lg hover:bg-n2f-accent/90 disabled:opacity-50">
                                 {savingTags ? 'Saving...' : 'Save Tags'}
                               </button>
-                              <button onClick={() => setEditingTags(false)} className="px-3 py-1 text-xs border rounded-lg hover:bg-gray-50">Cancel</button>
+                              <button onClick={() => setEditingTags(false)} className="px-3 py-1 text-xs border border-n2f-border rounded-lg hover:bg-n2f-elevated">Cancel</button>
                             </div>
                           </div>
                         ) : (
                           <div className="flex flex-wrap gap-1.5">
                             {detailTags.length > 0 ? detailTags.map((t: any) => (
-                              <span key={t.id || t.name} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">{t.name}</span>
-                            )) : <span className="text-xs text-gray-400">No tags</span>}
+                              <span key={t.id || t.name} className="px-2 py-0.5 bg-n2f-accent/10 text-n2f-accent text-xs rounded-full">{t.name}</span>
+                            )) : <span className="text-xs text-n2f-text-muted">No tags</span>}
                           </div>
                         )}
                       </div>
 
                       {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => handleToggle(detail)} className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border ${detail.active ? 'text-yellow-700 border-yellow-300 hover:bg-yellow-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}>
+                        <button onClick={() => handleToggle(detail)} className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border ${detail.active ? 'text-amber-400 border-amber-700 hover:bg-amber-900/30' : 'text-emerald-400 border-emerald-700 hover:bg-emerald-900/30'}`}>
                           {detail.active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
                           {detail.active ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button onClick={() => handleExecute(detail.id)} disabled={executing === detail.id} className="flex items-center gap-2 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                        <button onClick={() => handleExecute(detail.id)} disabled={executing === detail.id} className="flex items-center gap-2 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
                           {executing === detail.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                           Execute
                         </button>
-                        <button onClick={() => { setEditing(!editing); setEditJson(JSON.stringify(detail, null, 2)); }} className="flex items-center gap-2 px-3 py-1.5 text-xs text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50">
+                        <button onClick={() => { setEditing(!editing); setEditJson(JSON.stringify(detail, null, 2)); }} className="flex items-center gap-2 px-3 py-1.5 text-xs text-n2f-accent border border-n2f-accent/30 rounded-lg hover:bg-n2f-accent/10">
                           <Pencil className="h-3.5 w-3.5" /> {editing ? 'Cancel Edit' : 'Edit JSON'}
                         </button>
                       </div>
@@ -327,9 +327,9 @@ export default function WorkflowList() {
                             value={editJson}
                             onChange={(e) => setEditJson(e.target.value)}
                             rows={20}
-                            className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg font-mono focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 text-xs border border-n2f-border rounded-lg font-mono focus:ring-2 focus:ring-n2f-accent bg-n2f-elevated text-n2f-text"
                           />
-                          <button onClick={handleUpdate} disabled={saving} className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                          <button onClick={handleUpdate} disabled={saving} className="flex items-center gap-2 px-4 py-2 text-sm bg-n2f-accent text-white rounded-lg hover:bg-n2f-accent/90 disabled:opacity-50">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Changes
                           </button>
                         </div>
@@ -344,7 +344,7 @@ export default function WorkflowList() {
             </div>
           ))}
           {workflows.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No workflows found</div>
+            <div className="text-center py-8 text-n2f-text-secondary">No workflows found</div>
           )}
         </div>
       )}

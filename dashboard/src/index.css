@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-n2f-bg text-n2f-text antialiased;
     margin: 0;
     min-height: 100vh;
   }
@@ -13,50 +13,51 @@
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-n2f-bg;
     @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
-    @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-n2f-bg disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-n2f-accent text-gray-900 hover:bg-n2f-accent-hover focus:ring-n2f-accent;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
-    @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-blue-500;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-n2f-bg disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-n2f-card text-n2f-text border border-n2f-border hover:bg-n2f-elevated hover:border-n2f-border-hover focus:ring-n2f-accent;
   }
 
   .btn-danger {
     @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
-    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-n2f-bg disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-red-900 text-red-200 hover:bg-red-800 focus:ring-red-500 border border-red-700;
   }
 
   .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm;
-    @apply placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm;
+    @apply block w-full px-3 py-2 border border-n2f-border rounded-lg shadow-sm;
+    @apply bg-n2f-card text-n2f-text placeholder-n2f-text-muted;
+    @apply focus:outline-none focus:ring-2 focus:ring-n2f-accent focus:border-n2f-accent text-sm;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-medium text-n2f-text-secondary mb-1;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+    @apply bg-n2f-card rounded-xl shadow-sm border border-n2f-border p-6;
   }
 
   .stat-card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col;
+    @apply bg-n2f-card rounded-xl shadow-sm border border-n2f-border p-6 flex flex-col;
   }
 
   .stat-value {
-    @apply text-3xl font-bold text-gray-900;
+    @apply text-3xl font-bold text-n2f-text;
   }
 
   .stat-label {
-    @apply text-sm text-gray-500 mt-1;
+    @apply text-sm text-n2f-text-secondary mt-1;
   }
 }

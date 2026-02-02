@@ -38,38 +38,38 @@ export default function AdminHealth() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">System Health</h1>
-        <p className="text-gray-500 mt-1">Error trends and recent failures</p>
+        <h1 className="text-2xl font-bold text-n2f-text">System Health</h1>
+        <p className="text-n2f-text-secondary mt-1">Error trends and recent failures</p>
       </div>
 
       {/* Summary */}
-      <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+      <div className="card bg-gradient-to-br from-red-900/30 to-red-900/30 border-red-700">
         <div className="flex items-center gap-3">
           <AlertTriangle className="h-6 w-6 text-red-500" />
           <div>
-            <p className="font-medium text-red-800">{totalErrors} errors in last 30 days</p>
-            <p className="text-sm text-red-600">{errors.length} most recent shown below</p>
+            <p className="font-medium text-red-300">{totalErrors} errors in last 30 days</p>
+            <p className="text-sm text-red-400">{errors.length} most recent shown below</p>
           </div>
         </div>
       </div>
 
       {/* Error Trend */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Error Trend (30 days)</h2>
+        <h2 className="text-lg font-semibold text-n2f-text mb-4">Error Trend (30 days)</h2>
         {trend.length === 0 ? (
-          <p className="text-gray-500 text-sm py-4 text-center">No errors - system is healthy</p>
+          <p className="text-n2f-text-secondary text-sm py-4 text-center">No errors - system is healthy</p>
         ) : (
           <div className="space-y-1">
             {trend.map((d) => (
               <div key={d.date} className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 w-20 shrink-0">{d.date.slice(5)}</span>
+                <span className="text-xs text-n2f-text-secondary w-20 shrink-0">{d.date.slice(5)}</span>
                 <div className="flex-1">
                   <div
                     className="h-4 bg-red-400 rounded-sm"
                     style={{ width: `${(d.count / maxErrors) * 100}%`, minWidth: '4px' }}
                   />
                 </div>
-                <span className="text-xs text-gray-600 w-10 text-right">{d.count}</span>
+                <span className="text-xs text-n2f-text-secondary w-10 text-right">{d.count}</span>
               </div>
             ))}
           </div>
@@ -78,33 +78,33 @@ export default function AdminHealth() {
 
       {/* Recent Errors */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Errors</h2>
+        <h2 className="text-lg font-semibold text-n2f-text mb-4">Recent Errors</h2>
         {errors.length === 0 ? (
-          <p className="text-gray-500 text-sm py-4 text-center">No errors found</p>
+          <p className="text-n2f-text-secondary text-sm py-4 text-center">No errors found</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-n2f-border">
               <thead>
                 <tr>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">Time</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">User</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">Tool</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">Error</th>
-                  <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">ms</th>
+                  <th className="text-left text-xs font-medium text-n2f-text-secondary uppercase pb-2">Time</th>
+                  <th className="text-left text-xs font-medium text-n2f-text-secondary uppercase pb-2">User</th>
+                  <th className="text-left text-xs font-medium text-n2f-text-secondary uppercase pb-2">Tool</th>
+                  <th className="text-left text-xs font-medium text-n2f-text-secondary uppercase pb-2">Error</th>
+                  <th className="text-right text-xs font-medium text-n2f-text-secondary uppercase pb-2">ms</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-n2f-border">
                 {errors.map((e) => (
                   <tr key={e.id}>
-                    <td className="py-2 text-xs text-gray-500 whitespace-nowrap">
+                    <td className="py-2 text-xs text-n2f-text-secondary whitespace-nowrap">
                       {new Date(e.created_at).toLocaleString()}
                     </td>
-                    <td className="py-2 text-sm text-gray-900 truncate max-w-[150px]">{e.email}</td>
-                    <td className="py-2 text-sm text-gray-600 font-mono">{e.tool_name}</td>
-                    <td className="py-2 text-sm text-red-600 truncate max-w-[250px]" title={e.error_message}>
+                    <td className="py-2 text-sm text-n2f-text truncate max-w-[150px]">{e.email}</td>
+                    <td className="py-2 text-sm text-n2f-text-secondary font-mono">{e.tool_name}</td>
+                    <td className="py-2 text-sm text-red-400 truncate max-w-[250px]" title={e.error_message}>
                       {e.error_message}
                     </td>
-                    <td className="py-2 text-sm text-gray-500 text-right">{e.response_time_ms}</td>
+                    <td className="py-2 text-sm text-n2f-text-secondary text-right">{e.response_time_ms}</td>
                   </tr>
                 ))}
               </tbody>

@@ -20,6 +20,26 @@ export default {
           900: '#1e3a8a',
           950: '#172554',
         },
+        n2f: {
+          bg: '#050508',
+          card: '#0a0b0e',
+          elevated: '#12141a',
+        },
+        'n2f-accent': {
+          DEFAULT: '#fbbf24',
+          light: '#fcd34d',
+          dark: '#f59e0b',
+          hover: '#d97706',
+        },
+        'n2f-text': {
+          DEFAULT: '#f9fafb',
+          secondary: '#9ca3af',
+          muted: '#6b7280',
+        },
+        'n2f-border': {
+          DEFAULT: '#1f2937',
+          hover: '#374151',
+        },
       },
     },
   },

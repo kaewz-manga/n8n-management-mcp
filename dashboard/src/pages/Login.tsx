@@ -89,20 +89,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-n2f-bg py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="flex justify-center">
-            <div className="bg-blue-600 p-3 rounded-xl">
-              <Zap className="h-8 w-8 text-white" />
+            <div className="bg-n2f-accent p-3 rounded-xl">
+              <Zap className="h-8 w-8 text-gray-900" />
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-n2f-text">
             Sign in to your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-n2f-text-secondary">
             Or{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link to="/register" className="font-medium text-n2f-accent hover:text-n2f-accent-light">
               create a new account
             </Link>
           </p>
@@ -117,16 +117,16 @@ export default function Login() {
                 type="button"
                 onClick={() => handleOAuthLogin(provider.id)}
                 disabled={oauthLoading !== null}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-n2f-border rounded-lg shadow-sm bg-n2f-card hover:bg-n2f-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {oauthLoading === provider.id ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+                  <Loader2 className="h-5 w-5 animate-spin text-n2f-text-muted" />
                 ) : provider.id === 'github' ? (
-                  <GitHubIcon className="h-5 w-5" />
+                  <GitHubIcon className="h-5 w-5 text-n2f-text" />
                 ) : (
                   <GoogleIcon className="h-5 w-5" />
                 )}
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-n2f-text">
                   Continue with {provider.name}
                 </span>
               </button>
@@ -134,10 +134,10 @@ export default function Login() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-n2f-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">Or continue with email</span>
+                <span className="px-2 bg-n2f-bg text-n2f-text-muted">Or continue with email</span>
               </div>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function Login() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}

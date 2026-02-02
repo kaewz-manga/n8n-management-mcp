@@ -50,33 +50,33 @@ export default function Layout({ children }: LayoutProps) {
   const [n8nExpanded, setN8nExpanded] = useState(location.pathname.startsWith('/n8n'));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-n2f-bg">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/70 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-n2f-card border-r border-n2f-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <Zap className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-2 px-6 py-4 border-b border-n2f-border">
+            <div className="bg-n2f-accent p-2 rounded-lg">
+              <Zap className="h-5 w-5 text-gray-900" />
             </div>
-            <span className="font-semibold text-gray-900">n8n MCP</span>
+            <span className="font-semibold text-n2f-text">n8n MCP</span>
             <button
               className="ml-auto lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="h-5 w-5 text-gray-500" />
+              <X className="h-5 w-5 text-n2f-text-secondary" />
             </button>
           </div>
 
@@ -90,8 +90,8 @@ export default function Layout({ children }: LayoutProps) {
                   to={item.href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-n2f-accent/10 text-n2f-accent'
+                      : 'text-n2f-text-secondary hover:bg-n2f-elevated'
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -102,10 +102,10 @@ export default function Layout({ children }: LayoutProps) {
             })}
             {/* n8n Management */}
             {connections.length > 0 && (
-              <div className="pt-4 mt-4 border-t border-gray-200">
+              <div className="pt-4 mt-4 border-t border-n2f-border">
                 <button
                   onClick={() => setN8nExpanded(!n8nExpanded)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 w-full"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-n2f-text-secondary hover:bg-n2f-elevated w-full"
                 >
                   <Server className="h-5 w-5" />
                   <span className="flex-1 text-left">n8n Management</span>
@@ -118,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
                       <select
                         value={activeConnection?.id || ''}
                         onChange={(e) => setActiveConnectionId(e.target.value)}
-                        className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500"
+                        className="w-full text-xs px-2 py-1.5 border border-n2f-border rounded-lg bg-n2f-card text-n2f-text-secondary focus:ring-2 focus:ring-blue-500"
                       >
                         {connections.map((c) => (
                           <option key={c.id} value={c.id}>{c.name}</option>
@@ -133,8 +133,8 @@ export default function Layout({ children }: LayoutProps) {
                           to={item.href}
                           className={`flex items-center gap-3 px-3 py-2 ml-2 rounded-lg text-sm font-medium transition-colors ${
                             isActive
-                              ? 'bg-orange-50 text-orange-700'
-                              : 'text-gray-500 hover:bg-gray-100'
+                              ? 'bg-n2f-accent/10 text-n2f-accent'
+                              : 'text-n2f-text-muted hover:bg-n2f-elevated'
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
@@ -149,10 +149,10 @@ export default function Layout({ children }: LayoutProps) {
             )}
 
             {isAdmin && (
-              <div className="pt-4 mt-4 border-t border-gray-200">
+              <div className="pt-4 mt-4 border-t border-n2f-border">
                 <Link
                   to="/admin"
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/30"
                   onClick={() => setSidebarOpen(false)}
                 >
                   <Shield className="h-5 w-5" />
@@ -163,19 +163,19 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-n2f-border">
             <div className="flex items-center gap-3 px-3 py-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-n2f-text truncate">
                   {user?.email}
                 </p>
-                <p className="text-xs text-gray-500 capitalize">
+                <p className="text-xs text-n2f-text-secondary capitalize">
                   {user?.plan} plan
                 </p>
               </div>
               <button
                 onClick={logout}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                className="p-2 text-n2f-text-muted hover:text-n2f-text rounded-lg hover:bg-n2f-elevated"
                 title="Sign out"
               >
                 <LogOut className="h-5 w-5" />
@@ -188,19 +188,19 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Mobile header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 lg:hidden">
+        <header className="sticky top-0 z-30 bg-n2f-card border-b border-n2f-border lg:hidden">
           <div className="flex items-center gap-4 px-4 py-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 -ml-2 text-gray-500 hover:text-gray-700"
+              className="p-2 -ml-2 text-n2f-text-secondary hover:text-n2f-text"
             >
               <Menu className="h-6 w-6" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-1.5 rounded-lg">
-                <Zap className="h-4 w-4 text-white" />
+              <div className="bg-n2f-accent p-1.5 rounded-lg">
+                <Zap className="h-4 w-4 text-gray-900" />
               </div>
-              <span className="font-semibold text-gray-900">n8n MCP</span>
+              <span className="font-semibold text-n2f-text">n8n MCP</span>
             </div>
           </div>
         </header>

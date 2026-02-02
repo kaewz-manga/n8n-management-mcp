@@ -25,20 +25,20 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-n2f-bg">
       {/* Header */}
-      <header className="border-b border-gray-200">
+      <header className="border-b border-n2f-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Zap className="h-5 w-5 text-white" />
+              <div className="bg-n2f-accent p-2 rounded-lg">
+                <Zap className="h-5 w-5 text-gray-900" />
               </div>
-              <span className="text-xl font-bold text-gray-900">n8n MCP</span>
+              <span className="text-xl font-bold text-n2f-text">n8n MCP</span>
             </div>
 
             <div className="flex items-center gap-4">
-              <Link to="/login" className="text-gray-600 hover:text-gray-900">
+              <Link to="/login" className="text-n2f-text-secondary hover:text-n2f-text">
                 Sign In
               </Link>
               <Link to="/register" className="btn-primary">
@@ -50,12 +50,12 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-b from-blue-50 to-white">
+      <section className="py-20 bg-gradient-to-b from-n2f-card to-n2f-bg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          <h1 className="text-5xl font-bold text-n2f-text mb-6">
             Control n8n with AI
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-xl text-n2f-text-secondary max-w-2xl mx-auto mb-8">
             Connect your AI assistant to n8n automation. Let Claude, Cursor, or any MCP-compatible client
             manage your workflows, executions, and more.
           </p>
@@ -76,14 +76,14 @@ export default function Landing() {
           </div>
 
           {/* Demo Code Block */}
-          <div className="max-w-2xl mx-auto bg-gray-900 rounded-xl p-6 text-left shadow-2xl">
+          <div className="max-w-2xl mx-auto bg-black rounded-xl p-6 text-left shadow-2xl">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-3 h-3 rounded-full bg-red-500" />
               <div className="w-3 h-3 rounded-full bg-yellow-500" />
               <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="ml-2 text-gray-400 text-sm">Claude Desktop</span>
+              <span className="ml-2 text-n2f-text-muted text-sm">Claude Desktop</span>
             </div>
-            <pre className="text-sm text-gray-100 overflow-x-auto">
+            <pre className="text-sm text-green-400 overflow-x-auto">
               <code>{`> List all my n8n workflows
 
 I found 5 workflows in your n8n instance:
@@ -104,10 +104,10 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-n2f-text mb-4">
               Everything you need to automate with AI
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-n2f-text-secondary max-w-2xl mx-auto">
               Our MCP server provides a complete interface between your AI assistant and n8n.
             </p>
           </div>
@@ -148,10 +148,10 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
       </section>
 
       {/* How It Works */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-n2f-bg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-n2f-text mb-4">
               Get started in 3 steps
             </h2>
           </div>
@@ -175,9 +175,9 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
           </div>
 
           <div className="mt-12 max-w-2xl mx-auto">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">MCP Client Configuration</h3>
-              <pre className="bg-gray-900 rounded-lg p-4 text-sm text-gray-100 overflow-x-auto">
+            <div className="bg-n2f-card rounded-xl border border-n2f-border p-6">
+              <h3 className="font-semibold text-n2f-text mb-4">MCP Client Configuration</h3>
+              <pre className="bg-black rounded-lg p-4 text-sm text-green-400 overflow-x-auto">
 {`{
   "mcpServers": {
     "n8n": {
@@ -198,10 +198,10 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-n2f-text mb-4">
               Simple, transparent pricing
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-n2f-text-secondary">
               Start free, upgrade when you need more.
             </p>
           </div>
@@ -215,17 +215,17 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
+      <section className="py-20 bg-n2f-card border-t border-n2f-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className="text-3xl font-bold text-n2f-text mb-4">
             Ready to automate with AI?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-n2f-text-secondary mb-8 max-w-2xl mx-auto">
             Join developers using n8n MCP to supercharge their automation workflows.
           </p>
           <Link
             to="/register"
-            className="inline-flex items-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+            className="inline-flex items-center px-8 py-3 bg-n2f-accent text-gray-900 font-semibold rounded-lg hover:bg-n2f-accent-hover transition-colors"
           >
             Get Started Free <ArrowRight className="h-5 w-5 ml-2" />
           </Link>
@@ -233,30 +233,30 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-gray-900">
+      <footer className="py-12 bg-n2f-bg border-t border-n2f-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-2 rounded-lg">
-                <Zap className="h-4 w-4 text-white" />
+              <div className="bg-n2f-accent p-2 rounded-lg">
+                <Zap className="h-4 w-4 text-gray-900" />
               </div>
-              <span className="text-lg font-bold text-white">n8n MCP</span>
+              <span className="text-lg font-bold text-n2f-text">n8n MCP</span>
             </div>
 
-            <div className="flex items-center gap-6 text-gray-400">
-              <a href="#" className="hover:text-white">Documentation</a>
-              <a href="#" className="hover:text-white">API Reference</a>
+            <div className="flex items-center gap-6 text-n2f-text-muted">
+              <a href="#" className="hover:text-n2f-accent">Documentation</a>
+              <a href="#" className="hover:text-n2f-accent">API Reference</a>
               <a
                 href="https://github.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-white"
+                className="hover:text-n2f-accent"
               >
                 <Github className="h-5 w-5" />
               </a>
             </div>
 
-            <p className="text-gray-500 text-sm">
+            <p className="text-n2f-text-secondary text-sm">
               &copy; {new Date().getFullYear()} n8n MCP. All rights reserved.
             </p>
           </div>
@@ -277,12 +277,12 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-200 hover:border-blue-200 hover:shadow-lg transition-all">
-      <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center text-blue-600 mb-4">
+    <div className="bg-n2f-card p-6 rounded-xl border border-n2f-border hover:border-n2f-accent/30 hover:shadow-lg transition-all">
+      <div className="bg-n2f-accent/10 w-12 h-12 rounded-lg flex items-center justify-center text-n2f-accent mb-4">
         {icon}
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="text-lg font-semibold text-n2f-text mb-2">{title}</h3>
+      <p className="text-n2f-text-secondary">{description}</p>
     </div>
   );
 }
@@ -295,48 +295,48 @@ function PricingCard({ plan }: { plan: Plan }) {
 
   return (
     <div
-      className={`bg-white rounded-xl border-2 p-6 relative ${
-        isPopular ? 'border-blue-600 shadow-lg' : 'border-gray-200'
+      className={`bg-n2f-card rounded-xl border-2 p-6 relative ${
+        isPopular ? 'border-n2f-accent shadow-lg' : 'border-n2f-border'
       } ${!isFree ? 'blur-sm select-none pointer-events-none' : ''}`}
     >
       {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-n2f-accent text-gray-900 text-xs font-semibold px-3 py-1 rounded-full">
           Popular
         </div>
       )}
 
-      <h3 className="text-lg font-semibold text-gray-900 mb-1">{plan.name}</h3>
+      <h3 className="text-lg font-semibold text-n2f-text mb-1">{plan.name}</h3>
       <div className="mb-4">
-        <span className="text-3xl font-bold text-gray-900">
+        <span className="text-3xl font-bold text-n2f-text">
           {isFree ? `$${plan.price_monthly}` : '$xx.xx'}
         </span>
-        <span className="text-gray-500">/month</span>
+        <span className="text-n2f-text-secondary">/month</span>
       </div>
 
       <ul className="space-y-3 mb-6">
-        <li className="flex items-center gap-2 text-sm text-gray-600">
-          <Check className="h-4 w-4 text-green-500" />
+        <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+          <Check className="h-4 w-4 text-emerald-400" />
           {plan.monthly_request_limit.toLocaleString()} requests/month
         </li>
-        <li className="flex items-center gap-2 text-sm text-gray-600">
-          <Check className="h-4 w-4 text-green-500" />
+        <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+          <Check className="h-4 w-4 text-emerald-400" />
           {plan.max_connections === -1 ? 'Unlimited' : plan.max_connections} n8n connections
         </li>
         {features.analytics && (
-          <li className="flex items-center gap-2 text-sm text-gray-600">
-            <Check className="h-4 w-4 text-green-500" />
+          <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+            <Check className="h-4 w-4 text-emerald-400" />
             Usage analytics
           </li>
         )}
         {features.support && (
-          <li className="flex items-center gap-2 text-sm text-gray-600">
-            <Check className="h-4 w-4 text-green-500" />
+          <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+            <Check className="h-4 w-4 text-emerald-400" />
             {features.support.charAt(0).toUpperCase() + features.support.slice(1)} support
           </li>
         )}
         {features.sla && (
-          <li className="flex items-center gap-2 text-sm text-gray-600">
-            <Check className="h-4 w-4 text-green-500" />
+          <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+            <Check className="h-4 w-4 text-emerald-400" />
             SLA guarantee
           </li>
         )}
@@ -345,12 +345,12 @@ function PricingCard({ plan }: { plan: Plan }) {
       {isFree ? (
         <Link
           to="/register"
-          className="block w-full text-center py-2 rounded-lg font-medium bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
+          className="block w-full text-center py-2 rounded-lg font-medium bg-n2f-card text-n2f-text hover:bg-n2f-elevated border border-n2f-border transition-colors"
         >
           Start Free
         </Link>
       ) : (
-        <div className="block w-full text-center py-2 rounded-lg font-medium bg-gray-100 text-gray-400">
+        <div className="block w-full text-center py-2 rounded-lg font-medium bg-n2f-card text-n2f-text-muted border border-n2f-border">
           Coming Soon
         </div>
       )}
@@ -370,11 +370,11 @@ function StepCard({
 }) {
   return (
     <div className="text-center">
-      <div className="bg-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-4">
+      <div className="bg-n2f-accent w-12 h-12 rounded-full flex items-center justify-center text-gray-900 font-bold text-xl mx-auto mb-4">
         {number}
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="text-lg font-semibold text-n2f-text mb-2">{title}</h3>
+      <p className="text-n2f-text-secondary">{description}</p>
     </div>
   );
 }

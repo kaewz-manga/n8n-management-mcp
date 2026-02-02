@@ -106,38 +106,38 @@ export default function Settings() {
     <div className="space-y-8 max-w-2xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your account settings</p>
+        <h1 className="text-2xl font-bold text-n2f-text">Settings</h1>
+        <p className="text-n2f-text-secondary mt-1">Manage your account settings</p>
       </div>
 
       {/* Profile Section */}
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <User className="h-5 w-5 text-blue-600" />
+          <div className="p-2 bg-n2f-accent/10 rounded-lg">
+            <User className="h-5 w-5 text-n2f-accent" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
+          <h2 className="text-lg font-semibold text-n2f-text">Profile</h2>
         </div>
 
         <div className="space-y-4">
           <div>
             <label className="label">Email</label>
             <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-900">{user?.email}</span>
+              <Mail className="h-4 w-4 text-n2f-text-muted" />
+              <span className="text-n2f-text">{user?.email}</span>
             </div>
           </div>
 
           <div>
             <label className="label">Account Status</label>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 capitalize">
               {user?.status}
             </span>
           </div>
 
           <div>
             <label className="label">Current Plan</label>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-n2f-accent/10 text-n2f-accent capitalize">
               {user?.plan}
             </span>
           </div>
@@ -145,7 +145,7 @@ export default function Settings() {
           {isOAuthUser && (
             <div>
               <label className="label">Login Method</label>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-900/30 text-purple-400 capitalize">
                 {user?.oauth_provider}
               </span>
             </div>
@@ -156,17 +156,17 @@ export default function Settings() {
       {/* Security Section */}
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-yellow-100 rounded-lg">
-            <Shield className="h-5 w-5 text-yellow-600" />
+          <div className="p-2 bg-amber-900/30 rounded-lg">
+            <Shield className="h-5 w-5 text-amber-400" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">Security</h2>
+          <h2 className="text-lg font-semibold text-n2f-text">Security</h2>
         </div>
 
         <div className="space-y-4">
           {!isOAuthUser && (
             <div>
               <label className="label">Password</label>
-              <p className="text-sm text-gray-500 mb-2">
+              <p className="text-sm text-n2f-text-secondary mb-2">
                 Change your password to keep your account secure
               </p>
               <button
@@ -181,30 +181,30 @@ export default function Settings() {
           {isOAuthUser && (
             <div>
               <label className="label">Password</label>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-n2f-text-secondary">
                 You signed in with {user?.oauth_provider}. Password management is handled by your OAuth provider.
               </p>
             </div>
           )}
 
-          <div className="pt-4 border-t border-gray-200">
+          <div className="pt-4 border-t border-n2f-border">
             <label className="label flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-400" />
+              <Clock className="h-4 w-4 text-n2f-text-muted" />
               Session Duration
             </label>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-n2f-text-secondary mb-2">
               How long you stay logged in before needing to sign in again
             </p>
 
             {sessionError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-2 flex items-center gap-2">
+              <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm mb-2 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 {sessionError}
               </div>
             )}
 
             {sessionSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm mb-2 flex items-center gap-2">
+              <div className="bg-emerald-900/30 border border-emerald-700 text-emerald-400 px-3 py-2 rounded-lg text-sm mb-2 flex items-center gap-2">
                 <Check className="h-4 w-4" />
                 Session duration updated
               </div>
@@ -223,13 +223,13 @@ export default function Settings() {
                   </option>
                 ))}
               </select>
-              {sessionLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+              {sessionLoading && <Loader2 className="h-4 w-4 animate-spin text-n2f-text-muted" />}
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-200">
+          <div className="pt-4 border-t border-n2f-border">
             <label className="label">Active Sessions</label>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-n2f-text-secondary mb-2">
               Sign out of all other sessions
             </p>
             <button onClick={logout} className="btn-secondary">
@@ -241,15 +241,15 @@ export default function Settings() {
 
       {/* MCP Configuration Help */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-n2f-text mb-4">
           MCP Client Configuration
         </h2>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-n2f-text-secondary mb-4">
           Use this configuration in your MCP client (Claude Desktop, Cursor, etc.)
         </p>
 
-        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-          <pre className="text-sm text-gray-100">
+        <div className="bg-black rounded-lg p-4 overflow-x-auto">
+          <pre className="text-sm text-green-400">
 {`{
   "mcpServers": {
     "n8n": {
@@ -263,21 +263,21 @@ export default function Settings() {
           </pre>
         </div>
 
-        <p className="text-xs text-gray-500 mt-3">
+        <p className="text-xs text-n2f-text-secondary mt-3">
           Replace YOUR_API_KEY with the API key from your connection.
         </p>
       </div>
 
       {/* Danger Zone */}
-      <div className="card border-red-200">
+      <div className="card border-red-700">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-red-100 rounded-lg">
-            <Trash2 className="h-5 w-5 text-red-600" />
+          <div className="p-2 bg-red-900/30 rounded-lg">
+            <Trash2 className="h-5 w-5 text-red-400" />
           </div>
-          <h2 className="text-lg font-semibold text-red-900">Danger Zone</h2>
+          <h2 className="text-lg font-semibold text-red-300">Danger Zone</h2>
         </div>
 
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-n2f-text-secondary mb-4">
           Once you delete your account, there is no going back. Please be certain.
         </p>
 
@@ -289,15 +289,15 @@ export default function Settings() {
             Delete Account
           </button>
         ) : (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-800 mb-4">
+          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+            <p className="text-sm text-red-300 mb-4">
               Are you sure you want to delete your account? This action cannot be
               undone. All your data, connections, and API keys will be permanently
               deleted.
             </p>
 
             {deleteError && (
-              <div className="bg-red-100 border border-red-300 text-red-800 px-3 py-2 rounded-lg text-sm mb-4 flex items-center gap-2">
+              <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm mb-4 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 {deleteError}
               </div>
@@ -305,7 +305,7 @@ export default function Settings() {
 
             {!isOAuthUser && (
               <div className="mb-4">
-                <label className="label text-red-800">Enter your password to confirm</label>
+                <label className="label text-red-300">Enter your password to confirm</label>
                 <input
                   type="password"
                   className="input"
@@ -348,10 +348,10 @@ export default function Settings() {
 
       {/* Password Change Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-n2f-elevated rounded-xl shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-4 border-b border-n2f-border">
+              <h2 className="text-lg font-semibold text-n2f-text">
                 Change Password
               </h2>
               <button
@@ -362,7 +362,7 @@ export default function Settings() {
                   setNewPassword('');
                   setConfirmPassword('');
                 }}
-                className="p-1 text-gray-400 hover:text-gray-600"
+                className="p-1 text-n2f-text-muted hover:text-n2f-text"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -370,16 +370,16 @@ export default function Settings() {
 
             {passwordSuccess ? (
               <div className="p-6 text-center">
-                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="h-8 w-8 text-green-600" />
+                <div className="bg-emerald-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="h-8 w-8 text-emerald-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900">Password Updated!</h3>
-                <p className="text-gray-500 mt-1">Your password has been changed successfully.</p>
+                <h3 className="text-lg font-medium text-n2f-text">Password Updated!</h3>
+                <p className="text-n2f-text-secondary mt-1">Your password has been changed successfully.</p>
               </div>
             ) : (
               <form onSubmit={handleChangePassword} className="p-4 space-y-4">
                 {passwordError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                  <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     {passwordError}
                   </div>
@@ -406,7 +406,7 @@ export default function Settings() {
                     required
                     minLength={8}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-n2f-text-secondary mt-1">
                     Must be at least 8 characters
                   </p>
                 </div>

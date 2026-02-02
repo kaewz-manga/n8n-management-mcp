@@ -123,7 +123,7 @@ export default function Connections() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-n2f-accent" />
       </div>
     );
   }
@@ -133,8 +133,8 @@ export default function Connections() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Connections</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-n2f-text">Connections</h1>
+          <p className="text-n2f-text-secondary mt-1">
             Manage your n8n instance connections
           </p>
         </div>
@@ -145,22 +145,22 @@ export default function Connections() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-red-500" />
-          <span className="text-red-700">{error}</span>
+        <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-400" />
+          <span className="text-red-300">{error}</span>
         </div>
       )}
 
       {/* Connections List */}
       {connections.length === 0 ? (
         <div className="card text-center py-12">
-          <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Key className="h-8 w-8 text-gray-400" />
+          <div className="bg-n2f-elevated w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Key className="h-8 w-8 text-n2f-text-muted" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-n2f-text mb-2">
             No connections yet
           </h3>
-          <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+          <p className="text-n2f-text-secondary mb-6 max-w-sm mx-auto">
             Add your first n8n instance to start using AI-powered automation.
           </p>
           <button onClick={() => setShowAddModal(true)} className="btn-primary">
@@ -176,21 +176,21 @@ export default function Connections() {
                 <div className="flex items-start gap-4">
                   <div
                     className={`w-3 h-3 rounded-full mt-1.5 ${
-                      conn.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                      conn.status === 'active' ? 'bg-emerald-400' : 'bg-n2f-text-muted'
                     }`}
                   />
                   <div>
-                    <h3 className="font-semibold text-gray-900">{conn.name}</h3>
+                    <h3 className="font-semibold text-n2f-text">{conn.name}</h3>
                     <a
                       href={conn.n8n_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1"
+                      className="text-sm text-n2f-text-secondary hover:text-n2f-accent flex items-center gap-1"
                     >
                       {conn.n8n_url}
                       <ExternalLink className="h-3 w-3" />
                     </a>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-n2f-text-muted mt-1">
                       Added {new Date(conn.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -206,7 +206,7 @@ export default function Connections() {
                   </button>
                   <button
                     onClick={() => handleDeleteConnection(conn.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                    className="p-2 text-n2f-text-muted hover:text-red-400 hover:bg-red-900/30 rounded-lg"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -215,23 +215,23 @@ export default function Connections() {
 
               {/* API Keys */}
               {conn.api_keys.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <div className="mt-4 pt-4 border-t border-n2f-border">
+                  <h4 className="text-sm font-medium text-n2f-text-secondary mb-2">
                     API Keys
                   </h4>
                   <div className="space-y-2">
                     {conn.api_keys.map((key) => (
                       <div
                         key={key.id}
-                        className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between py-2 px-3 bg-n2f-card rounded-lg"
                       >
                         <div className="flex items-center gap-3">
-                          <Key className="h-4 w-4 text-gray-400" />
+                          <Key className="h-4 w-4 text-n2f-text-muted" />
                           <div>
-                            <code className="text-sm font-mono text-gray-700">
+                            <code className="text-sm font-mono text-n2f-text-secondary">
                               {key.prefix}...
                             </code>
-                            <span className="ml-2 text-xs text-gray-500">
+                            <span className="ml-2 text-xs text-n2f-text-secondary">
                               {key.name}
                             </span>
                           </div>
@@ -240,8 +240,8 @@ export default function Connections() {
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full ${
                               key.status === 'active'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-600'
+                                ? 'bg-emerald-900/30 text-emerald-400'
+                                : 'bg-n2f-elevated text-n2f-text-secondary'
                             }`}
                           >
                             {key.status}
@@ -249,7 +249,7 @@ export default function Connections() {
                           {key.status === 'active' && (
                             <button
                               onClick={() => handleRevokeApiKey(key.id)}
-                              className="text-xs text-red-600 hover:text-red-700"
+                              className="text-xs text-red-400 hover:text-red-300"
                             >
                               Revoke
                             </button>
@@ -268,14 +268,14 @@ export default function Connections() {
       {/* Add Connection Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-n2f-card rounded-xl shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-4 border-b border-n2f-border">
+              <h2 className="text-lg font-semibold text-n2f-text">
                 Add n8n Connection
               </h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="p-1 text-gray-400 hover:text-gray-600"
+                className="p-1 text-n2f-text-muted hover:text-n2f-text-secondary"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -283,7 +283,7 @@ export default function Connections() {
 
             <form onSubmit={handleAddConnection} className="p-4 space-y-4">
               {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+                <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm">
                   {formError}
                 </div>
               )}
@@ -310,7 +310,7 @@ export default function Connections() {
                   onChange={(e) => setFormUrl(e.target.value)}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-n2f-text-secondary mt-1">
                   The base URL of your n8n instance
                 </p>
               </div>
@@ -325,7 +325,7 @@ export default function Connections() {
                   onChange={(e) => setFormApiKey(e.target.value)}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-n2f-text-secondary mt-1">
                   Generate from n8n Settings → API
                 </p>
               </div>
@@ -361,26 +361,26 @@ export default function Connections() {
       {/* API Key Display Modal */}
       {showApiKeyModal && (
         <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
+          <div className="bg-n2f-card rounded-xl shadow-xl max-w-lg w-full">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="bg-green-100 p-2 rounded-full">
-                  <Check className="h-6 w-6 text-green-600" />
+                <div className="bg-emerald-900/30 p-2 rounded-full">
+                  <Check className="h-6 w-6 text-emerald-400" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-n2f-text">
                   Your API Key
                 </h2>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-yellow-800">
+              <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-4 mb-4">
+                <p className="text-sm text-yellow-300">
                   <strong>Important:</strong> Copy this API key now. You won't be
                   able to see it again!
                 </p>
               </div>
 
-              <div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2">
-                <code className="flex-1 text-sm font-mono break-all text-gray-800">
+              <div className="bg-n2f-elevated rounded-lg p-3 flex items-center gap-2">
+                <code className="flex-1 text-sm font-mono break-all text-n2f-text">
                   {newApiKey}
                 </code>
                 <button
@@ -388,7 +388,7 @@ export default function Connections() {
                   className="btn-secondary p-2"
                 >
                   {copied ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-emerald-400" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
@@ -396,11 +396,11 @@ export default function Connections() {
               </div>
 
               <div className="mt-6">
-                <h3 className="font-medium text-gray-900 mb-2">
+                <h3 className="font-medium text-n2f-text mb-2">
                   How to use this key:
                 </h3>
-                <div className="bg-gray-50 rounded-lg p-3 text-sm font-mono text-gray-700">
-                  <p className="text-gray-500 mb-1"># In your MCP client config:</p>
+                <div className="bg-n2f-card rounded-lg p-3 text-sm font-mono text-n2f-text-secondary">
+                  <p className="text-n2f-text-secondary mb-1"># In your MCP client config:</p>
                   <p>Authorization: Bearer {newApiKey.substring(0, 20)}...</p>
                 </div>
               </div>

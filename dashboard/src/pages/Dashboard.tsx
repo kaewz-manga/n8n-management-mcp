@@ -48,16 +48,16 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-n2f-accent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-        <AlertCircle className="h-5 w-5 text-red-500" />
-        <span className="text-red-700">{error}</span>
+      <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 flex items-center gap-3">
+        <AlertCircle className="h-5 w-5 text-red-400" />
+        <span className="text-red-300">{error}</span>
       </div>
     );
   }
@@ -70,8 +70,8 @@ export default function Dashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-n2f-text">Dashboard</h1>
+        <p className="text-n2f-text-secondary mt-1">
           Welcome back! Here's an overview of your account.
         </p>
       </div>
@@ -81,8 +81,8 @@ export default function Dashboard() {
         {/* Current Plan */}
         <div className="stat-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Zap className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-n2f-accent/10 rounded-lg">
+              <Zap className="h-5 w-5 text-n2f-accent" />
             </div>
             <div>
               <p className="stat-label">Current Plan</p>
@@ -94,14 +94,14 @@ export default function Dashboard() {
         {/* Connections */}
         <div className="stat-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <LinkIcon className="h-5 w-5 text-green-600" />
+            <div className="p-2 bg-emerald-900/30 rounded-lg">
+              <LinkIcon className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
               <p className="stat-label">Connections</p>
               <p className="stat-value">
                 {usage?.connections.used || 0}
-                <span className="text-lg font-normal text-gray-400">
+                <span className="text-lg font-normal text-n2f-text-muted">
                   /{usage?.connections.limit || 1}
                 </span>
               </p>
@@ -112,14 +112,14 @@ export default function Dashboard() {
         {/* Requests Used */}
         <div className="stat-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Activity className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-n2f-accent/10 rounded-lg">
+              <Activity className="h-5 w-5 text-n2f-accent" />
             </div>
             <div>
               <p className="stat-label">Requests Used</p>
               <p className="stat-value">
                 {usage?.requests.used.toLocaleString() || 0}
-                <span className="text-lg font-normal text-gray-400">
+                <span className="text-lg font-normal text-n2f-text-muted">
                   /{usage?.requests.limit.toLocaleString() || 100}
                 </span>
               </p>
@@ -130,8 +130,8 @@ export default function Dashboard() {
         {/* Success Rate */}
         <div className="stat-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
+            <div className="p-2 bg-purple-900/30 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-purple-400" />
             </div>
             <div>
               <p className="stat-label">Success Rate</p>
@@ -144,36 +144,36 @@ export default function Dashboard() {
       {/* Usage Progress */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-n2f-text">
             Monthly Usage
           </h2>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-n2f-text-secondary">
             Resets {usage?.reset_at ? new Date(usage.reset_at).toLocaleDateString() : 'next month'}
           </span>
         </div>
 
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">
+            <span className="text-n2f-text-secondary">
               {usage?.requests.used.toLocaleString()} requests used
             </span>
-            <span className="text-gray-600">
+            <span className="text-n2f-text-secondary">
               {usage?.requests.remaining.toLocaleString()} remaining
             </span>
           </div>
-          <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-3 bg-n2f-border rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
                 usagePercent >= 90
                   ? 'bg-red-500'
                   : usagePercent >= 70
                   ? 'bg-yellow-500'
-                  : 'bg-blue-500'
+                  : 'bg-n2f-accent'
               }`}
               style={{ width: `${Math.min(usagePercent, 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-n2f-text-secondary">
             {usagePercent}% of monthly limit used
           </p>
         </div>
@@ -182,12 +182,12 @@ export default function Dashboard() {
       {/* Connections List */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-n2f-text">
             Your Connections
           </h2>
           <Link
             to="/connections"
-            className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-sm text-n2f-accent hover:text-n2f-accent-light flex items-center gap-1"
           >
             View all
             <ArrowRight className="h-4 w-4" />
@@ -196,8 +196,8 @@ export default function Dashboard() {
 
         {connections.length === 0 ? (
           <div className="text-center py-8">
-            <LinkIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 mb-4">No connections yet</p>
+            <LinkIcon className="h-12 w-12 text-n2f-text-muted mx-auto mb-3" />
+            <p className="text-n2f-text-secondary mb-4">No connections yet</p>
             <Link to="/connections" className="btn-primary">
               Add your first n8n connection
             </Link>
@@ -207,20 +207,20 @@ export default function Dashboard() {
             {connections.slice(0, 3).map((conn) => (
               <div
                 key={conn.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-n2f-card rounded-lg"
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      conn.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                      conn.status === 'active' ? 'bg-emerald-400' : 'bg-n2f-text-muted'
                     }`}
                   />
                   <div>
-                    <p className="font-medium text-gray-900">{conn.name}</p>
-                    <p className="text-sm text-gray-500">{conn.n8n_url}</p>
+                    <p className="font-medium text-n2f-text">{conn.name}</p>
+                    <p className="text-sm text-n2f-text-secondary">{conn.n8n_url}</p>
                   </div>
                 </div>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-n2f-text-secondary">
                   {conn.api_keys.length} API key{conn.api_keys.length !== 1 && 's'}
                 </span>
               </div>
@@ -231,11 +231,11 @@ export default function Dashboard() {
 
       {/* Quick Start Guide */}
       {connections.length === 0 && (
-        <div className="card bg-blue-50 border-blue-200">
-          <h2 className="text-lg font-semibold text-blue-900 mb-2">
+        <div className="card bg-n2f-accent/10 border-n2f-accent/30">
+          <h2 className="text-lg font-semibold text-n2f-accent mb-2">
             Quick Start Guide
           </h2>
-          <ol className="list-decimal list-inside space-y-2 text-blue-800">
+          <ol className="list-decimal list-inside space-y-2 text-n2f-accent">
             <li>Add your n8n instance URL and API key</li>
             <li>Copy the generated SaaS API key</li>
             <li>Configure your MCP client (Claude Desktop, Cursor, etc.)</li>

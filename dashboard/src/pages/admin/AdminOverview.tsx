@@ -32,18 +32,18 @@ export default function AdminOverview() {
   ];
 
   const colorMap: Record<string, { bg: string; icon: string }> = {
-    blue: { bg: 'bg-blue-100', icon: 'text-blue-600' },
-    green: { bg: 'bg-green-100', icon: 'text-green-600' },
-    purple: { bg: 'bg-purple-100', icon: 'text-purple-600' },
-    yellow: { bg: 'bg-yellow-100', icon: 'text-yellow-600' },
-    red: { bg: 'bg-red-100', icon: 'text-red-600' },
+    blue: { bg: 'bg-n2f-accent/10', icon: 'text-n2f-accent' },
+    green: { bg: 'bg-emerald-900/30', icon: 'text-emerald-400' },
+    purple: { bg: 'bg-purple-900/30', icon: 'text-purple-400' },
+    yellow: { bg: 'bg-amber-900/30', icon: 'text-amber-400' },
+    red: { bg: 'bg-red-900/30', icon: 'text-red-400' },
   };
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
-        <p className="text-gray-500 mt-1">Platform metrics at a glance</p>
+        <h1 className="text-2xl font-bold text-n2f-text">Admin Overview</h1>
+        <p className="text-n2f-text-secondary mt-1">Platform metrics at a glance</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -55,12 +55,12 @@ export default function AdminOverview() {
                 <div className={`p-2 rounded-lg ${colors.bg}`}>
                   <card.icon className={`h-5 w-5 ${colors.icon}`} />
                 </div>
-                <span className="text-sm font-medium text-gray-500">{card.label}</span>
+                <span className="text-sm font-medium text-n2f-text-secondary">{card.label}</span>
               </div>
-              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+              <p className="text-2xl font-bold text-n2f-text">{card.value}</p>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-sm text-gray-500">{card.sub}</p>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
+                <p className="text-sm text-n2f-text-secondary">{card.sub}</p>
+                <ArrowRight className="h-4 w-4 text-n2f-text-muted" />
               </div>
             </Link>
           );

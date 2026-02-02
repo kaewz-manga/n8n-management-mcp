@@ -52,20 +52,20 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-n2f-bg py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="flex justify-center">
-            <div className="bg-blue-600 p-3 rounded-xl">
-              <Zap className="h-8 w-8 text-white" />
+            <div className="bg-n2f-accent p-3 rounded-xl">
+              <Zap className="h-8 w-8 text-gray-900" />
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-n2f-text">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-n2f-text-secondary">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link to="/login" className="font-medium text-n2f-accent hover:text-n2f-accent-light">
               Sign in
             </Link>
           </p>
@@ -73,7 +73,7 @@ export default function Register() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -111,7 +111,7 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-n2f-text-muted">
                 Must be at least 8 characters
               </p>
             </div>
@@ -151,7 +151,7 @@ export default function Register() {
             </button>
           </div>
 
-          <p className="text-xs text-center text-gray-500">
+          <p className="text-xs text-center text-n2f-text-muted">
             By creating an account, you agree to our Terms of Service and Privacy Policy.
           </p>
         </form>
