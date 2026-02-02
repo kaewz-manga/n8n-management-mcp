@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getPlans, type Plan } from '../lib/api';
 import {
   Zap,
   Shield,
@@ -6,11 +8,21 @@ import {
   Globe,
   Code,
   Bot,
+  Check,
   ArrowRight,
   Github,
 } from 'lucide-react';
 
 export default function Landing() {
+  const [plans, setPlans] = useState<Plan[]>([]);
+
+  useEffect(() => {
+    getPlans().then((res) => {
+      if (res.success && res.data) {
+        setPlans(res.data.plans);
+      }
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -182,19 +194,29 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
         </div>
       </section>
 
-      {/* Pricing Section - Coming Soon */}
+      {/* Pricing Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
+          <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Pricing
+              Simple, transparent pricing
             </h2>
-            <p className="text-lg text-gray-600 mb-6">
-              We're preparing our plans. Stay tuned!
+            <p className="text-lg text-gray-600">
+              Start free, upgrade when you need more.
             </p>
-            <span className="inline-block bg-yellow-100 text-yellow-800 text-sm font-medium px-4 py-2 rounded-full">
-              Coming Soon
-            </span>
+          </div>
+
+          <div className="relative">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 blur-sm select-none pointer-events-none">
+              {plans.map((plan) => (
+                <PricingCard key={plan.id} plan={plan} />
+              ))}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-yellow-100 text-yellow-800 text-lg font-semibold px-6 py-3 rounded-full shadow-lg">
+                Coming Soon
+              </span>
+            </div>
           </div>
         </div>
       </section>
@@ -268,6 +290,67 @@ function FeatureCard({
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+// Pricing Card Component
+function PricingCard({ plan }: { plan: Plan }) {
+  const isPopular = plan.id === 'pro';
+  const features = plan.features as Record<string, any>;
+
+  return (
+    <div
+      className={`bg-white rounded-xl border-2 p-6 relative ${
+        isPopular ? 'border-blue-600 shadow-lg' : 'border-gray-200'
+      }`}
+    >
+      {isPopular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+          Popular
+        </div>
+      )}
+
+      <h3 className="text-lg font-semibold text-gray-900 mb-1">{plan.name}</h3>
+      <div className="mb-4">
+        <span className="text-3xl font-bold text-gray-900">
+          ${plan.price_monthly}
+        </span>
+        <span className="text-gray-500">/month</span>
+      </div>
+
+      <ul className="space-y-3 mb-6">
+        <li className="flex items-center gap-2 text-sm text-gray-600">
+          <Check className="h-4 w-4 text-green-500" />
+          {plan.monthly_request_limit.toLocaleString()} requests/month
+        </li>
+        <li className="flex items-center gap-2 text-sm text-gray-600">
+          <Check className="h-4 w-4 text-green-500" />
+          {plan.max_connections === -1 ? 'Unlimited' : plan.max_connections} n8n connections
+        </li>
+        {features.analytics && (
+          <li className="flex items-center gap-2 text-sm text-gray-600">
+            <Check className="h-4 w-4 text-green-500" />
+            Usage analytics
+          </li>
+        )}
+        {features.support && (
+          <li className="flex items-center gap-2 text-sm text-gray-600">
+            <Check className="h-4 w-4 text-green-500" />
+            {features.support.charAt(0).toUpperCase() + features.support.slice(1)} support
+          </li>
+        )}
+        {features.sla && (
+          <li className="flex items-center gap-2 text-sm text-gray-600">
+            <Check className="h-4 w-4 text-green-500" />
+            SLA guarantee
+          </li>
+        )}
+      </ul>
+
+      <div className="block w-full text-center py-2 rounded-lg font-medium bg-gray-100 text-gray-400">
+        Coming Soon
+      </div>
     </div>
   );
 }

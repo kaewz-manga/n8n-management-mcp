@@ -223,13 +223,13 @@ export default function Usage() {
         </div>
       )}
 
-      {/* Plans - admin only */}
-      {isAdmin && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Available Plans
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Plans */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Available Plans
+        </h2>
+        <div className="relative">
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${!isAdmin ? 'blur-sm select-none pointer-events-none' : ''}`}>
             {plans.map((plan) => {
               const isCurrent = plan.id === user?.plan;
               const isUpgrade =
@@ -318,8 +318,15 @@ export default function Usage() {
               );
             })}
           </div>
+          {!isAdmin && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-yellow-100 text-yellow-800 text-lg font-semibold px-6 py-3 rounded-full shadow-lg">
+                Coming Soon
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
