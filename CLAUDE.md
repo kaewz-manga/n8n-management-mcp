@@ -58,7 +58,7 @@ There is also a **Dashboard** (React 19 SPA) in `dashboard/` deployed on Cloudfl
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `src/index.ts` | ~1600 | Main entry — all API routes + MCP handler |
+| `src/index.ts` | ~1500 | Main entry — all API routes + MCP handler |
 | `src/auth.ts` | ~530 | Register, login, API key validation, admin auth |
 | `src/db.ts` | ~410 | All D1 CRUD operations (users, connections, AI, bots, usage) |
 | `src/crypto-utils.ts` | ~345 | PBKDF2, AES-256-GCM, JWT, API key generation |
@@ -107,7 +107,7 @@ Key relationships:
 
 | Auth | Used By | How |
 |------|---------|-----|
-| **Email/Password** | Dashboard login | PBKDF2 hash → JWT (7-day) |
+| **Email/Password** | Dashboard login | PBKDF2 hash → JWT (24 hours) |
 | **OAuth 2.0** | Dashboard login | GitHub/Google → JWT |
 | **SaaS API Key** | MCP clients | `Bearer saas_xxx` → SHA-256 lookup → decrypt n8n key |
 | **HMAC-SHA256** | Vercel agent | `HMAC(AGENT_SECRET, "userId:aiConnectionId")` → decrypt AI/bot keys |
@@ -118,7 +118,7 @@ Key relationships:
 
 - Password: PBKDF2 with 100,000 iterations
 - Credentials: AES-256-GCM (n8n API keys, AI API keys, bot tokens)
-- JWT: HS256 signing, 7-day expiry
+- JWT: HS256 signing, 24-hour expiry
 - API keys: SHA-256 hashed (plain text never stored)
 - OAuth state: KV-stored CSRF tokens (10 min TTL)
 - Stripe webhooks: HMAC-SHA256 signature verification

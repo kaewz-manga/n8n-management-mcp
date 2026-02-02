@@ -25,15 +25,14 @@
 
 | Project | Repo | Purpose |
 |---------|------|---------|
-| **n8n-mcp-agent** | `n8n-mcp-agent/` | Next.js 15 Chat UI + Dashboard frontend (Vercel) |
+| **n8n-mcp-agent** | Moved to separate repo | Next.js 15 Chat UI + Dashboard frontend (Vercel) |
 | **n8n-management-mcp** | This repo | CF Worker backend (API + MCP + D1) |
 
-The **n8n-mcp-agent** project is a separate Next.js app that:
-- Provides Chat UI (streaming AI chat with MCP tool calling)
-- Provides alternative Dashboard UI (CRUD for connections, AI connections, bot connections)
-- Calls this Worker via HMAC-SHA256 for AI/bot configs (`/api/agent/config`, `/api/agent/bot-config`)
-- Calls this Worker via JWT for dashboard CRUD
-- Calls this Worker via `saas_` API key for MCP tools
+The **n8n-mcp-agent** project has been **moved out** to a separate repository (previously in `agent/` folder).
+It connects to this Worker via:
+- HMAC-SHA256 for AI/bot configs (`/api/agent/config`, `/api/agent/bot-config`)
+- JWT for dashboard CRUD
+- `saas_` API key for MCP tools
 
 ---
 
@@ -172,9 +171,9 @@ The **n8n-mcp-agent** project is a separate Next.js app that:
 ## File Structure
 
 ```
-n8n-mcp-workers/
+n8n-management-mcp/
 ├── src/
-│   ├── index.ts          # Main Worker - API routes + MCP handler (~900 lines)
+│   ├── index.ts          # Main Worker - API routes + MCP handler (~1500 lines)
 │   ├── auth.ts           # Auth - register, login, API key validation (~530 lines)
 │   ├── db.ts             # D1 database layer - all CRUD (~410 lines)
 │   ├── crypto-utils.ts   # PBKDF2, AES-GCM, JWT, API key gen (~345 lines)
@@ -327,7 +326,7 @@ n8n-mcp-workers/
 ```
 Email/Password:
   Register → PBKDF2 hash → user created (plan: free)
-  Login → verify hash → JWT token (24h)
+  Login → verify hash → JWT token (24 hours)
 
 OAuth (GitHub/Google):
   Dashboard → Worker /api/auth/oauth/:provider → redirect to provider
