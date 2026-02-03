@@ -72,7 +72,6 @@ export default function AdminRevenue() {
                     className={`h-full rounded-full ${
                       d.plan === 'enterprise' ? 'bg-purple-500' :
                       d.plan === 'pro' ? 'bg-blue-500' :
-                      d.plan === 'starter' ? 'bg-green-500' :
                       'bg-gray-400'
                     }`}
                     style={{ width: `${Math.max(pct, 2)}%` }}

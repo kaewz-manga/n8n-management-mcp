@@ -91,7 +91,6 @@ export default function AdminUsers() {
         <select value={planFilter} onChange={(e) => { setPlanFilter(e.target.value); setOffset(0); }} className="border border-n2f-border rounded-lg text-sm px-3 py-2">
           <option value="">All Plans</option>
           <option value="free">Free</option>
-          <option value="starter">Starter</option>
           <option value="pro">Pro</option>
           <option value="enterprise">Enterprise</option>
         </select>
@@ -144,7 +143,6 @@ export default function AdminUsers() {
                         className="text-sm border border-n2f-border rounded px-2 py-1"
                       >
                         <option value="free">Free</option>
-                        <option value="starter">Starter</option>
                         <option value="pro">Pro</option>
                         <option value="enterprise">Enterprise</option>
                       </select>

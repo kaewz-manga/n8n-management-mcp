@@ -71,7 +71,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="bg-n2f-accent p-2 rounded-lg">
               <Zap className="h-5 w-5 text-gray-900" />
             </div>
-            <span className="font-semibold text-n2f-text">n8n MCP</span>
+            <span className="font-semibold text-n2f-text">n8n Management MCP</span>
             <button
               className="ml-auto lg:hidden"
               onClick={() => setSidebarOpen(false)}
@@ -200,7 +200,7 @@ export default function Layout({ children }: LayoutProps) {
               <div className="bg-n2f-accent p-1.5 rounded-lg">
                 <Zap className="h-4 w-4 text-gray-900" />
               </div>
-              <span className="font-semibold text-n2f-text">n8n MCP</span>
+              <span className="font-semibold text-n2f-text">n8n Management MCP</span>
             </div>
           </div>
         </header>
