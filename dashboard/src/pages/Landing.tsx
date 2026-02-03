@@ -293,8 +293,10 @@ function PricingCard({ plan }: { plan: Plan }) {
   const isFree = plan.id === 'free';
   const isEnterprise = plan.id === 'enterprise';
   const features = plan.features as Record<string, any>;
-  const dailyLimit = (plan as any).daily_request_limit;
-  const isUnlimited = dailyLimit === -1;
+  const dailyLimit = plan.daily_request_limit;
+  const minuteLimit = plan.requests_per_minute;
+  const isDailyUnlimited = dailyLimit === -1;
+  const isMinuteUnlimited = minuteLimit === -1;
 
   return (
     <div
@@ -326,17 +328,35 @@ function PricingCard({ plan }: { plan: Plan }) {
       </div>
 
       <ul className="space-y-3 mb-6">
+        {/* n8n Instances */}
         <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
           <Check className="h-4 w-4 text-emerald-400" />
-          {isUnlimited ? (
-            <span className="text-n2f-accent font-semibold">Unlimited requests</span>
+          {isEnterprise ? 'Custom' : 'Unlimited'} n8n instances
+        </li>
+        {/* Rate Limits */}
+        <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+          <Check className="h-4 w-4 text-emerald-400" />
+          {isEnterprise ? (
+            'Custom rate limits'
           ) : (
-            `${dailyLimit} requests/day`
+            <span>
+              {isMinuteUnlimited ? 'Unlimited' : minuteLimit} req/min
+              {features.fair_use && <span className="text-n2f-text-muted"> (fair use)</span>}
+            </span>
           )}
         </li>
         <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
           <Check className="h-4 w-4 text-emerald-400" />
-          {plan.max_connections === -1 ? 'Unlimited' : plan.max_connections} n8n connection{plan.max_connections !== 1 ? 's' : ''}
+          {isEnterprise ? (
+            'Custom daily quota'
+          ) : isDailyUnlimited ? (
+            <span className="text-n2f-accent font-semibold">Unlimited req/day</span>
+          ) : (
+            <span>
+              {dailyLimit.toLocaleString()} req/day
+              {features.fair_use && <span className="text-n2f-text-muted"> (fair use)</span>}
+            </span>
+          )}
         </li>
         {features.analytics && (
           <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
@@ -354,12 +374,6 @@ function PricingCard({ plan }: { plan: Plan }) {
           <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
             <Check className="h-4 w-4 text-emerald-400" />
             Private MCP server
-          </li>
-        )}
-        {features.sla && (
-          <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
-            <Check className="h-4 w-4 text-emerald-400" />
-            SLA guarantee
           </li>
         )}
       </ul>

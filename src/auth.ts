@@ -28,6 +28,8 @@ import {
   getCurrentYearMonth,
   getCurrentDate,
   getDailyUsage,
+  getMinuteUsage,
+  getCurrentMinuteKey,
   countUserConnections,
 } from './db';
 
@@ -323,12 +325,38 @@ export async function authenticateMcpRequest(
     });
   }
 
-  // Get plan limits (daily-based, -1 = unlimited)
+  // Get plan limits
   const plan = await getPlan(env.DB, cachedData.plan);
   const dailyLimit = plan?.daily_request_limit ?? 100;
+  const minuteLimit = plan?.requests_per_minute ?? 50;
   const today = getCurrentDate();
+  const minuteKey = getCurrentMinuteKey();
 
-  // Check rate limit (skip for Pro/Enterprise with unlimited = -1)
+  // Check per-minute rate limit first (applies to all plans except enterprise with -1)
+  let minuteUsage = 0;
+  if (minuteLimit > 0) {
+    minuteUsage = await getMinuteUsage(env.RATE_LIMIT_KV, cachedData.user_id, minuteKey);
+    if (minuteUsage >= minuteLimit) {
+      return {
+        context: null,
+        error: {
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: `Rate limit exceeded (${minuteLimit} requests/minute). Please wait and try again.`,
+            details: {
+              limit: minuteLimit,
+              used: minuteUsage,
+              type: 'per_minute',
+              plan: cachedData.plan,
+            },
+          },
+        },
+      };
+    }
+  }
+
+  // Check daily rate limit
   let dailyUsage = 0;
   if (dailyLimit > 0) {
     dailyUsage = await getDailyUsage(env.RATE_LIMIT_KV, cachedData.user_id, today);
@@ -339,10 +367,11 @@ export async function authenticateMcpRequest(
           success: false,
           error: {
             code: 'RATE_LIMIT_EXCEEDED',
-            message: 'Daily request limit exceeded. Upgrade to Pro for unlimited requests.',
+            message: 'Daily request limit exceeded. Upgrade to Pro for more requests.',
             details: {
               limit: dailyLimit,
               used: dailyUsage,
+              type: 'daily',
               plan: cachedData.plan,
             },
           },

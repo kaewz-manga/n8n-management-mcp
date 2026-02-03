@@ -46,6 +46,12 @@ export interface Usage {
     remaining: number;
     unlimited?: boolean;
   };
+  rate_limit?: {
+    used: number;
+    limit: number;
+    remaining: number;
+    unlimited?: boolean;
+  };
   monthly?: {
     period: string;
     used: number;
@@ -63,10 +69,11 @@ export interface Usage {
 export interface Plan {
   id: string;
   name: string;
-  daily_request_limit: number;  // -1 = unlimited
+  daily_request_limit: number;   // -1 = unlimited
+  requests_per_minute: number;   // -1 = unlimited
   monthly_request_limit: number; // deprecated
-  max_connections: number;
-  price_monthly: number;        // -1 = contact us
+  max_connections: number;       // -1 = unlimited
+  price_monthly: number;         // -1 = contact us
   features: Record<string, any>;
 }
 

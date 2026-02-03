@@ -785,3 +785,35 @@ export async function incrementDailyUsage(
   await kv.put(key, String(newValue), { expirationTtl: 172800 });
   return newValue;
 }
+
+// ============================================
+// Per-Minute Rate Limiting (KV-based)
+// ============================================
+
+export function getCurrentMinuteKey(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}T${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`;
+}
+
+export async function getMinuteUsage(
+  kv: KVNamespace,
+  userId: string,
+  minuteKey: string
+): Promise<number> {
+  const key = `minute:${userId}:${minuteKey}`;
+  const value = await kv.get(key);
+  return value ? parseInt(value, 10) : 0;
+}
+
+export async function incrementMinuteUsage(
+  kv: KVNamespace,
+  userId: string,
+  minuteKey: string
+): Promise<number> {
+  const key = `minute:${userId}:${minuteKey}`;
+  const current = await getMinuteUsage(kv, userId, minuteKey);
+  const newValue = current + 1;
+  // TTL: 2 minutes to ensure cleanup
+  await kv.put(key, String(newValue), { expirationTtl: 120 });
+  return newValue;
+}

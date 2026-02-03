@@ -69,6 +69,7 @@ export default function Usage() {
 
   const currentPlan = plans.find((p) => p.id === user?.plan);
   const dailyLimit = currentPlan?.daily_request_limit ?? 100;
+  const minuteLimit = currentPlan?.requests_per_minute ?? 50;
 
   async function handleChangePlan(planId: string) {
     setCheckoutLoading(planId);
@@ -105,16 +106,15 @@ export default function Usage() {
               {currentPlan?.name || user?.plan}
             </h2>
             <p className="text-n2f-text-secondary mt-2">
+              {minuteLimit === -1 ? 'Unlimited' : minuteLimit} req/min
+              {' • '}
               {dailyLimit === -1 ? (
-                <span className="font-semibold">Unlimited requests</span>
+                <span className="font-semibold">Unlimited/day</span>
               ) : (
-                `${dailyLimit} requests/day`
+                `${dailyLimit.toLocaleString()} req/day`
               )}
               {' • '}
-              {currentPlan?.max_connections === -1
-                ? 'Unlimited'
-                : currentPlan?.max_connections}{' '}
-              connection{currentPlan?.max_connections !== 1 ? 's' : ''}
+              Unlimited instances
             </p>
           </div>
           <div className="text-right">
@@ -260,7 +260,9 @@ export default function Usage() {
             const isEnterprise = plan.id === 'enterprise';
             const isPro = plan.id === 'pro';
             const planDailyLimit = plan.daily_request_limit;
-            const planIsUnlimited = planDailyLimit === -1;
+            const planMinuteLimit = plan.requests_per_minute;
+            const isDailyUnlimited = planDailyLimit === -1;
+            const isMinuteUnlimited = planMinuteLimit === -1;
             const isUpgrade = !isCurrent && (
               (isFree && (isPro || isEnterprise)) ||
               (user?.plan === 'free' && !isFree)
@@ -307,30 +309,27 @@ export default function Usage() {
 
                 <ul className="space-y-2 text-sm text-n2f-text-secondary mb-6">
                   <li className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${planIsUnlimited ? 'bg-emerald-400' : 'bg-n2f-accent'}`} />
-                    {planIsUnlimited ? (
-                      <span className="text-emerald-400 font-semibold">Unlimited requests</span>
-                    ) : (
-                      `${planDailyLimit} requests/day`
-                    )}
+                    <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
+                    Unlimited n8n instances
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
-                    {plan.max_connections === -1
-                      ? 'Unlimited'
-                      : plan.max_connections}{' '}
-                    connection{plan.max_connections !== 1 ? 's' : ''}
+                    {isEnterprise ? 'Custom' : isMinuteUnlimited ? 'Unlimited' : planMinuteLimit} req/min
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${isDailyUnlimited ? 'bg-emerald-400' : 'bg-n2f-accent'}`} />
+                    {isEnterprise ? (
+                      'Custom daily quota'
+                    ) : isDailyUnlimited ? (
+                      <span className="text-emerald-400 font-semibold">Unlimited req/day</span>
+                    ) : (
+                      `${planDailyLimit.toLocaleString()} req/day`
+                    )}
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
                     {plan.features?.support || 'Community'} support
                   </li>
-                  {plan.features?.private_server && (
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
-                      Private MCP server
-                    </li>
-                  )}
                 </ul>
 
                 {isCurrent ? (

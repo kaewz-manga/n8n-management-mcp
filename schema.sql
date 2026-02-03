@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS plans (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     daily_request_limit INTEGER DEFAULT -1,  -- -1 = unlimited
-    monthly_request_limit INTEGER NOT NULL,  -- deprecated, use daily_request_limit
+    requests_per_minute INTEGER DEFAULT 50,  -- -1 = unlimited
+    monthly_request_limit INTEGER NOT NULL,  -- deprecated
     max_connections INTEGER NOT NULL,        -- -1 = unlimited
     price_monthly REAL NOT NULL,             -- -1 = contact us
     features TEXT,  -- JSON string
@@ -101,13 +102,13 @@ CREATE TABLE IF NOT EXISTS plans (
 -- ============================================
 -- Insert Default Plans
 -- ============================================
--- Free: 100 requests/day, 1 connection
--- Pro: Unlimited requests, 10 connections, $19/month
--- Enterprise: Contact us (private MCP server)
-INSERT OR IGNORE INTO plans (id, name, daily_request_limit, monthly_request_limit, max_connections, price_monthly, features) VALUES
-    ('free', 'Free', 100, -1, 1, 0, '{"support": "community", "analytics": false}'),
-    ('pro', 'Pro', -1, -1, 10, 19, '{"support": "priority", "analytics": true, "unlimited": true}'),
-    ('enterprise', 'Enterprise', -1, -1, -1, -1, '{"support": "dedicated", "analytics": true, "unlimited": true, "private_server": true, "contact_us": true}');
+-- Free: 50 req/min, 100 req/day, unlimited connections, $0
+-- Pro: 100 req/min, 5000 req/day (fair use), unlimited connections, $19/month
+-- Enterprise: Custom (contact us)
+INSERT OR IGNORE INTO plans (id, name, daily_request_limit, requests_per_minute, monthly_request_limit, max_connections, price_monthly, features) VALUES
+    ('free', 'Free', 100, 50, -1, -1, 0, '{"support": "community", "analytics": false}'),
+    ('pro', 'Pro', 5000, 100, -1, -1, 19, '{"support": "priority", "analytics": true, "fair_use": true}'),
+    ('enterprise', 'Enterprise', -1, -1, -1, -1, -1, '{"support": "dedicated", "analytics": true, "private_server": true, "contact_us": true}');
 
 -- ============================================
 -- Admin Audit Logs Table

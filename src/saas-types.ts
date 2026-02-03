@@ -72,7 +72,8 @@ export interface Plan {
   id: string;
   name: string;
   daily_request_limit: number;   // -1 = unlimited
-  monthly_request_limit: number; // -1 = unlimited (deprecated, use daily)
+  requests_per_minute: number;   // -1 = unlimited
+  monthly_request_limit: number; // -1 = unlimited (deprecated)
   max_connections: number;       // -1 = unlimited
   price_monthly: number;         // -1 = contact us
   features: string; // JSON string
