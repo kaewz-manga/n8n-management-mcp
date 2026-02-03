@@ -2,8 +2,8 @@
 
 > Context สำหรับ Claude ตัวใหม่ที่จะทำงานต่อ
 
-**Updated**: 2026-02-02
-**GitHub**: https://github.com/kaewz-manga/n8n-mcp-multi-tanent-v2
+**Updated**: 2026-02-03
+**GitHub**: https://github.com/kaewz-manga/n8n-management-mcp
 
 ### Production URLs
 
@@ -425,6 +425,7 @@ Claude Desktop config:
 5. **Dashboard tsc -b fails** - Vite 7 + TS 5.9 type def incompatibility → Use `vite build` directly (d535095)
 6. **OAuth redirect_uri wrong** - Used `APP_URL` (Dashboard) instead of `url.origin` (Worker) → Fixed (02fd3fa)
 7. **Dashboard sent custom redirect_uri** - Overrode Worker's callback URL → Removed from api.ts (02fd3fa)
+8. **package-lock.json out of sync** - vitest@2.1.9 missing from lock file → Cloudflare Pages `npm ci` failed → Fixed: ran `npm install` to sync (275b97d)
 
 ---
 
@@ -439,15 +440,16 @@ Claude Desktop config:
 ## Git History (Key Commits)
 
 ```
+275b97d fix: sync package-lock.json with package.json
+1c3007b Apply dark theme across entire dashboard
+ea52536 Blur only paid plan cards, keep free plan visible
+761a824 Remove agent/ folder, moved to separate repository
+458b575 Hide pricing plans from public, keep visible for admin only
+24f7887 Fix n8n Users page: show role as badge, add pending status
+5862384 Add user-configurable session duration and rename worker
+574c987 Add CLAUDE.md and update HANDOFF.md with current project status
 7cb3aa2 Add custom domains for Worker and Dashboard
 02fd3fa Fix OAuth redirect_uri to use Worker origin instead of APP_URL
-97edc5d Update HANDOFF.md with complete deployment status and architecture docs
-d535095 Fix dashboard build script to use vite build directly
-28486e4 Add Stripe billing, dashboard deploy config, OAuth docs, and SaaS stdio mode
-bf4cad5 Update HANDOFF.md with full SaaS platform status
-84e1265 Fix missing .bind() in getConnectionById and add error handling for MCP endpoint
-7219dd0 Configure Cloudflare D1 and KV for SaaS platform
-929a09e Merge PR #1: Add SaaS platform planning documentation
 ```
 
 ---
