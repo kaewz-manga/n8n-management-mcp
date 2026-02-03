@@ -34,7 +34,11 @@ import {
   getPlan,
   getAllPlans,
   getCurrentYearMonth,
+  getCurrentDate,
   getNextMonthReset,
+  getTomorrowReset,
+  getDailyUsage,
+  incrementDailyUsage,
   countUserConnections,
   updateUserPassword,
   deleteUser,
@@ -565,7 +569,7 @@ async function handleManagementApi(
     const planMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/plan$/);
     if (planMatch && method === 'PUT') {
       const body = await request.json() as { plan: string };
-      const validPlans = ['free', 'starter', 'pro', 'enterprise'];
+      const validPlans = ['free', 'pro', 'enterprise'];
       if (!validPlans.includes(body.plan)) {
         return apiResponse({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid plan' } }, 400);
       }
@@ -834,16 +838,24 @@ async function handleManagementApi(
       return apiResponse({ success: false, error: { code: 'CONNECTION_NOT_FOUND', message: 'Connection not found or inactive' } }, 404);
     }
 
-    // Check rate limit
+    // Check rate limit (daily for Free, unlimited for Pro/Enterprise)
     const freshUser = await getUserById(env.DB, authUser.userId);
     const currentPlanId = freshUser?.plan || authUser.plan;
     const userPlan = await getPlan(env.DB, currentPlanId);
-    const monthlyLimit = userPlan?.monthly_request_limit || 100;
+    const dailyLimit = userPlan?.daily_request_limit ?? 100;
+    const today = getCurrentDate();
     const yearMonth = getCurrentYearMonth();
-    const currentUsage = await getOrCreateMonthlyUsage(env.DB, authUser.userId, yearMonth);
-    if (currentUsage.request_count >= monthlyLimit) {
-      return apiResponse({ success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Monthly request limit exceeded' } }, 429);
+
+    // Pro/Enterprise have unlimited (-1 means unlimited)
+    if (dailyLimit > 0) {
+      const dailyUsage = await getDailyUsage(env.RATE_LIMIT_KV, authUser.userId, today);
+      if (dailyUsage >= dailyLimit) {
+        return apiResponse({ success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Daily request limit exceeded. Upgrade to Pro for unlimited requests.' } }, 429);
+      }
     }
+
+    // Still track monthly usage for analytics (but don't enforce)
+    const currentUsage = await getOrCreateMonthlyUsage(env.DB, authUser.userId, yearMonth);
 
     let n8nApiKey: string;
     try {
@@ -863,6 +875,7 @@ async function handleManagementApi(
         const result = await fn();
         const elapsed = Date.now() - start;
         await Promise.all([
+          incrementDailyUsage(env.RATE_LIMIT_KV, userId, today),
           incrementMonthlyUsage(env.DB, userId, yearMonth, true),
           logUsage(env.DB, userId, 'dashboard', connectionId!, toolName, 'success', elapsed, null),
         ]);
@@ -870,6 +883,7 @@ async function handleManagementApi(
       } catch (err: any) {
         const elapsed = Date.now() - start;
         await Promise.all([
+          incrementDailyUsage(env.RATE_LIMIT_KV, userId, today),
           incrementMonthlyUsage(env.DB, userId, yearMonth, false),
           logUsage(env.DB, userId, 'dashboard', connectionId!, toolName, 'error', elapsed, err.message),
         ]);
@@ -1296,23 +1310,34 @@ async function handleManagementApi(
 
   // GET /api/usage
   if (path === '/api/usage' && method === 'GET') {
+    const today = getCurrentDate();
     const yearMonth = getCurrentYearMonth();
     const usage = await getOrCreateMonthlyUsage(env.DB, authUser.userId, yearMonth);
+    const dailyUsage = await getDailyUsage(env.RATE_LIMIT_KV, authUser.userId, today);
     // Fetch fresh user from DB to get current plan (JWT may have stale plan after Stripe upgrade)
     const freshUser = await getUserById(env.DB, authUser.userId);
     const currentPlanId = freshUser?.plan || authUser.plan;
     const plan = await getPlan(env.DB, currentPlanId);
     const connectionCount = await countUserConnections(env.DB, authUser.userId);
+    const dailyLimit = plan?.daily_request_limit ?? 100;
+    const isUnlimited = dailyLimit < 0;
 
     return apiResponse({
       success: true,
       data: {
         plan: currentPlanId,
-        period: yearMonth,
+        period: today,
         requests: {
+          used: dailyUsage,
+          limit: isUnlimited ? -1 : dailyLimit,
+          remaining: isUnlimited ? -1 : Math.max(0, dailyLimit - dailyUsage),
+          unlimited: isUnlimited,
+        },
+        monthly: {
+          period: yearMonth,
           used: usage.request_count,
-          limit: plan?.monthly_request_limit || 100,
-          remaining: Math.max(0, (plan?.monthly_request_limit || 100) - usage.request_count),
+          success_count: usage.success_count,
+          error_count: usage.error_count,
         },
         connections: {
           used: connectionCount,
@@ -1321,7 +1346,7 @@ async function handleManagementApi(
         success_rate: usage.request_count > 0
           ? Math.round((usage.success_count / usage.request_count) * 100)
           : 100,
-        reset_at: getNextMonthReset(),
+        reset_at: getTomorrowReset(),
       },
     });
   }
@@ -1358,7 +1383,7 @@ async function handleMcpRequest(
   const rateLimitInfo: RateLimitInfo = {
     limit: authContext.usage.limit,
     remaining: authContext.usage.remaining,
-    reset: getNextMonthReset(),
+    reset: getTomorrowReset(),
   };
 
   try {
@@ -1402,9 +1427,11 @@ async function handleMcpRequest(
         // Check if result contains error
         const isError = result.content[0]?.text?.startsWith('Error:');
 
-        // Log usage
+        // Log usage (daily + monthly for analytics)
+        const today = getCurrentDate();
         const yearMonth = getCurrentYearMonth();
         await Promise.all([
+          incrementDailyUsage(env.RATE_LIMIT_KV, authContext.user.id, today),
           incrementMonthlyUsage(env.DB, authContext.user.id, yearMonth, !isError),
           logUsage(
             env.DB,
@@ -1418,8 +1445,10 @@ async function handleMcpRequest(
           ),
         ]);
 
-        // Update remaining count
-        rateLimitInfo.remaining = Math.max(0, rateLimitInfo.remaining - 1);
+        // Update remaining count (only if not unlimited)
+        if (rateLimitInfo.remaining > 0) {
+          rateLimitInfo.remaining = rateLimitInfo.remaining - 1;
+        }
 
         return jsonRpcResponse(id, result, rateLimitInfo);
       }

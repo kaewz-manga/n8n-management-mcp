@@ -26,6 +26,8 @@ import {
   incrementMonthlyUsage,
   getPlan,
   getCurrentYearMonth,
+  getCurrentDate,
+  getDailyUsage,
   countUserConnections,
 } from './db';
 
@@ -321,30 +323,32 @@ export async function authenticateMcpRequest(
     });
   }
 
-  // Get plan limits
+  // Get plan limits (daily-based, -1 = unlimited)
   const plan = await getPlan(env.DB, cachedData.plan);
-  const monthlyLimit = plan?.monthly_request_limit || 100;
+  const dailyLimit = plan?.daily_request_limit ?? 100;
+  const today = getCurrentDate();
 
-  // Check rate limit
-  const yearMonth = getCurrentYearMonth();
-  const usage = await getOrCreateMonthlyUsage(env.DB, cachedData.user_id, yearMonth);
-
-  if (usage.request_count >= monthlyLimit) {
-    return {
-      context: null,
-      error: {
-        success: false,
+  // Check rate limit (skip for Pro/Enterprise with unlimited = -1)
+  let dailyUsage = 0;
+  if (dailyLimit > 0) {
+    dailyUsage = await getDailyUsage(env.RATE_LIMIT_KV, cachedData.user_id, today);
+    if (dailyUsage >= dailyLimit) {
+      return {
+        context: null,
         error: {
-          code: 'RATE_LIMIT_EXCEEDED',
-          message: 'Monthly request limit exceeded',
-          details: {
-            limit: monthlyLimit,
-            used: usage.request_count,
-            plan: cachedData.plan,
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: 'Daily request limit exceeded. Upgrade to Pro for unlimited requests.',
+            details: {
+              limit: dailyLimit,
+              used: dailyUsage,
+              plan: cachedData.plan,
+            },
           },
         },
-      },
-    };
+      };
+    }
   }
 
   // Decrypt n8n API key
@@ -367,13 +371,14 @@ export async function authenticateMcpRequest(
   // Update last used (async, don't wait)
   updateApiKeyLastUsed(env.DB, cachedData.api_key_id).catch(() => {});
 
-  // Return auth context
+  // Return auth context (daily-based limits)
+  const isUnlimited = dailyLimit < 0;
   return {
     context: {
       user: {
         id: cachedData.user_id,
         email: cachedData.email,
-        plan: cachedData.plan as 'free' | 'starter' | 'pro' | 'enterprise',
+        plan: cachedData.plan as 'free' | 'pro' | 'enterprise',
       },
       connection: {
         id: cachedData.connection_id,
@@ -384,9 +389,9 @@ export async function authenticateMcpRequest(
         id: cachedData.api_key_id,
       },
       usage: {
-        current: usage.request_count,
-        limit: monthlyLimit,
-        remaining: monthlyLimit - usage.request_count,
+        current: dailyUsage,
+        limit: isUnlimited ? -1 : dailyLimit,
+        remaining: isUnlimited ? -1 : (dailyLimit - dailyUsage),
       },
     },
     error: null,

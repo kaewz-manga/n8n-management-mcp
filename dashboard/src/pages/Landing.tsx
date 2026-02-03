@@ -206,7 +206,7 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {plans.map((plan) => (
               <PricingCard key={plan.id} plan={plan} />
             ))}
@@ -290,37 +290,53 @@ function FeatureCard({
 // Pricing Card Component
 function PricingCard({ plan }: { plan: Plan }) {
   const isPopular = plan.id === 'pro';
-  const isFree = plan.price_monthly === 0;
+  const isFree = plan.id === 'free';
+  const isEnterprise = plan.id === 'enterprise';
   const features = plan.features as Record<string, any>;
+  const dailyLimit = (plan as any).daily_request_limit;
+  const isUnlimited = dailyLimit === -1;
 
   return (
     <div
       className={`bg-n2f-card rounded-xl border-2 p-6 relative ${
-        isPopular ? 'border-n2f-accent shadow-lg' : 'border-n2f-border'
-      } ${!isFree ? 'blur-sm select-none pointer-events-none' : ''}`}
+        isPopular ? 'border-n2f-accent shadow-lg scale-105' : 'border-n2f-border'
+      }`}
     >
       {isPopular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-n2f-accent text-gray-900 text-xs font-semibold px-3 py-1 rounded-full">
-          Popular
+          Most Popular
         </div>
       )}
 
-      <h3 className="text-lg font-semibold text-n2f-text mb-1">{plan.name}</h3>
-      <div className="mb-4">
-        <span className="text-3xl font-bold text-n2f-text">
-          {isFree ? `$${plan.price_monthly}` : '$xx.xx'}
-        </span>
-        <span className="text-n2f-text-secondary">/month</span>
+      <h3 className="text-xl font-semibold text-n2f-text mb-2">{plan.name}</h3>
+      <div className="mb-6">
+        {isEnterprise ? (
+          <div>
+            <span className="text-2xl font-bold text-n2f-text">Custom</span>
+            <p className="text-n2f-text-secondary text-sm mt-1">Contact us</p>
+          </div>
+        ) : (
+          <>
+            <span className="text-4xl font-bold text-n2f-text">
+              ${plan.price_monthly}
+            </span>
+            <span className="text-n2f-text-secondary">/month</span>
+          </>
+        )}
       </div>
 
       <ul className="space-y-3 mb-6">
         <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
           <Check className="h-4 w-4 text-emerald-400" />
-          {plan.monthly_request_limit.toLocaleString()} requests/month
+          {isUnlimited ? (
+            <span className="text-n2f-accent font-semibold">Unlimited requests</span>
+          ) : (
+            `${dailyLimit} requests/day`
+          )}
         </li>
         <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
           <Check className="h-4 w-4 text-emerald-400" />
-          {plan.max_connections === -1 ? 'Unlimited' : plan.max_connections} n8n connections
+          {plan.max_connections === -1 ? 'Unlimited' : plan.max_connections} n8n connection{plan.max_connections !== 1 ? 's' : ''}
         </li>
         {features.analytics && (
           <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
@@ -332,6 +348,12 @@ function PricingCard({ plan }: { plan: Plan }) {
           <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
             <Check className="h-4 w-4 text-emerald-400" />
             {features.support.charAt(0).toUpperCase() + features.support.slice(1)} support
+          </li>
+        )}
+        {features.private_server && (
+          <li className="flex items-center gap-2 text-sm text-n2f-text-secondary">
+            <Check className="h-4 w-4 text-emerald-400" />
+            Private MCP server
           </li>
         )}
         {features.sla && (
@@ -349,10 +371,20 @@ function PricingCard({ plan }: { plan: Plan }) {
         >
           Start Free
         </Link>
+      ) : isEnterprise ? (
+        <a
+          href="mailto:contact@node2flow.net?subject=Enterprise%20Inquiry"
+          className="block w-full text-center py-2 rounded-lg font-medium bg-n2f-card text-n2f-text hover:bg-n2f-elevated border border-n2f-border transition-colors"
+        >
+          Contact Sales
+        </a>
       ) : (
-        <div className="block w-full text-center py-2 rounded-lg font-medium bg-n2f-card text-n2f-text-muted border border-n2f-border">
-          Coming Soon
-        </div>
+        <Link
+          to="/register"
+          className="block w-full text-center py-2 rounded-lg font-medium bg-n2f-accent text-gray-900 hover:bg-n2f-accent-hover transition-colors"
+        >
+          Get Started
+        </Link>
       )}
     </div>
   );

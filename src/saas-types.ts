@@ -10,7 +10,7 @@ export interface User {
   id: string;
   email: string;
   password_hash: string;
-  plan: 'free' | 'starter' | 'pro' | 'enterprise';
+  plan: 'free' | 'pro' | 'enterprise';
   status: 'active' | 'suspended' | 'deleted';
   stripe_customer_id: string | null;
   session_duration_seconds: number;
@@ -71,9 +71,10 @@ export interface UsageMonthly {
 export interface Plan {
   id: string;
   name: string;
-  monthly_request_limit: number;
-  max_connections: number;
-  price_monthly: number;
+  daily_request_limit: number;   // -1 = unlimited
+  monthly_request_limit: number; // -1 = unlimited (deprecated, use daily)
+  max_connections: number;       // -1 = unlimited
+  price_monthly: number;         // -1 = contact us
   features: string; // JSON string
   is_active: number;
   created_at: string;
@@ -167,7 +168,7 @@ export interface AuthContext {
   user: {
     id: string;
     email: string;
-    plan: 'free' | 'starter' | 'pro' | 'enterprise';
+    plan: 'free' | 'pro' | 'enterprise';
   };
   connection: {
     id: string;

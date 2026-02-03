@@ -62,11 +62,13 @@ export default function Usage() {
     );
   }
 
-  const usagePercent = usage
+  const isUnlimited = usage?.requests.unlimited || usage?.requests.limit === -1;
+  const usagePercent = usage && !isUnlimited
     ? Math.round((usage.requests.used / usage.requests.limit) * 100)
     : 0;
 
   const currentPlan = plans.find((p) => p.id === user?.plan);
+  const dailyLimit = currentPlan?.daily_request_limit ?? 100;
 
   async function handleChangePlan(planId: string) {
     setCheckoutLoading(planId);
@@ -103,19 +105,27 @@ export default function Usage() {
               {currentPlan?.name || user?.plan}
             </h2>
             <p className="text-n2f-text-secondary mt-2">
-              {currentPlan?.monthly_request_limit.toLocaleString()} requests/month
+              {dailyLimit === -1 ? (
+                <span className="font-semibold">Unlimited requests</span>
+              ) : (
+                `${dailyLimit} requests/day`
+              )}
               {' • '}
               {currentPlan?.max_connections === -1
                 ? 'Unlimited'
                 : currentPlan?.max_connections}{' '}
-              connections
+              connection{currentPlan?.max_connections !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-bold">
-              ${currentPlan?.price_monthly || 0}
-              <span className="text-lg font-normal text-n2f-text-secondary">/mo</span>
-            </p>
+            {currentPlan?.price_monthly === -1 ? (
+              <p className="text-2xl font-bold">Custom</p>
+            ) : (
+              <p className="text-4xl font-bold">
+                ${currentPlan?.price_monthly || 0}
+                <span className="text-lg font-normal text-n2f-text-secondary">/mo</span>
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -128,27 +138,43 @@ export default function Usage() {
               <Activity className="h-5 w-5 text-n2f-accent" />
             </div>
             <span className="text-sm font-medium text-n2f-text-secondary">
-              Requests This Month
+              Requests Today
             </span>
           </div>
-          <p className="stat-value">
-            {usage?.requests.used.toLocaleString()}
-            <span className="text-lg font-normal text-n2f-text-muted">
-              /{usage?.requests.limit.toLocaleString()}
-            </span>
-          </p>
-          <div className="mt-3 h-2 bg-n2f-border rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${
-                usagePercent >= 90
-                  ? 'bg-red-400'
-                  : usagePercent >= 70
-                  ? 'bg-amber-400'
-                  : 'bg-n2f-accent'
-              }`}
-              style={{ width: `${Math.min(usagePercent, 100)}%` }}
-            />
-          </div>
+          {isUnlimited ? (
+            <>
+              <p className="stat-value">
+                {usage?.requests.used.toLocaleString()}
+                <span className="text-lg font-normal text-emerald-400 ml-2">
+                  Unlimited
+                </span>
+              </p>
+              <div className="mt-3 h-2 bg-emerald-900/30 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-emerald-400 w-full" />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="stat-value">
+                {usage?.requests.used.toLocaleString()}
+                <span className="text-lg font-normal text-n2f-text-muted">
+                  /{usage?.requests.limit.toLocaleString()}
+                </span>
+              </p>
+              <div className="mt-3 h-2 bg-n2f-border rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${
+                    usagePercent >= 90
+                      ? 'bg-red-400'
+                      : usagePercent >= 70
+                      ? 'bg-amber-400'
+                      : 'bg-n2f-accent'
+                  }`}
+                  style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="stat-card">
@@ -162,7 +188,7 @@ export default function Usage() {
           </div>
           <p className="stat-value">{usage?.success_rate || 100}%</p>
           <p className="text-sm text-n2f-text-secondary mt-1">
-            All time success rate
+            This month: {usage?.monthly?.used.toLocaleString() || 0} requests
           </p>
         </div>
 
@@ -172,7 +198,7 @@ export default function Usage() {
               <Calendar className="h-5 w-5 text-purple-400" />
             </div>
             <span className="text-sm font-medium text-n2f-text-secondary">
-              Billing Period
+              Daily Reset
             </span>
           </div>
           <p className="text-xl font-semibold text-n2f-text">
@@ -181,14 +207,14 @@ export default function Usage() {
           <p className="text-sm text-n2f-text-secondary mt-1">
             Resets{' '}
             {usage?.reset_at
-              ? new Date(usage.reset_at).toLocaleDateString()
-              : 'next month'}
+              ? new Date(usage.reset_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'tomorrow'} (midnight UTC)
           </p>
         </div>
       </div>
 
       {/* Usage Warning */}
-      {usagePercent >= 80 && (
+      {!isUnlimited && usagePercent >= 80 && (
         <div
           className={`rounded-lg p-4 flex items-start gap-3 ${
             usagePercent >= 90
@@ -208,16 +234,15 @@ export default function Usage() {
               }`}
             >
               {usagePercent >= 90
-                ? 'Usage limit almost reached'
-                : 'Approaching usage limit'}
+                ? 'Daily limit almost reached'
+                : 'Approaching daily limit'}
             </p>
             <p
               className={`text-sm mt-1 ${
                 usagePercent >= 90 ? 'text-red-300' : 'text-n2f-text-secondary'
               }`}
             >
-              You've used {usagePercent}% of your monthly quota. Consider
-              upgrading to avoid interruptions.
+              You've used {usagePercent}% of your daily quota. Upgrade to Pro for unlimited requests.
             </p>
           </div>
         </div>
@@ -228,26 +253,34 @@ export default function Usage() {
         <h2 className="text-lg font-semibold text-n2f-text mb-4">
           Available Plans
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {plans.map((plan) => {
             const isCurrent = plan.id === user?.plan;
-            const isFree = plan.price_monthly === 0;
-            const isBlurred = !isAdmin && !isFree;
-            const isUpgrade =
-              (plans.findIndex((p) => p.id === plan.id) >
-                plans.findIndex((p) => p.id === user?.plan)) &&
-              !isCurrent;
+            const isFree = plan.id === 'free';
+            const isEnterprise = plan.id === 'enterprise';
+            const isPro = plan.id === 'pro';
+            const planDailyLimit = plan.daily_request_limit;
+            const planIsUnlimited = planDailyLimit === -1;
+            const isUpgrade = !isCurrent && (
+              (isFree && (isPro || isEnterprise)) ||
+              (user?.plan === 'free' && !isFree)
+            );
 
             return (
               <div
                 key={plan.id}
                 className={`card relative ${
                   isCurrent ? 'border-n2f-accent border-2' : ''
-                } ${isBlurred ? 'blur-sm select-none pointer-events-none' : ''}`}
+                } ${isPro && !isCurrent ? 'border-n2f-accent/50' : ''}`}
               >
                 {isCurrent && (
                   <span className="absolute -top-3 left-4 bg-n2f-accent text-gray-900 text-xs px-2 py-1 rounded-full">
                     Current
+                  </span>
+                )}
+                {isPro && !isCurrent && (
+                  <span className="absolute -top-3 right-4 bg-n2f-accent/20 text-n2f-accent text-xs px-2 py-1 rounded-full">
+                    Recommended
                   </span>
                 )}
 
@@ -260,33 +293,57 @@ export default function Usage() {
                   <h3 className="font-semibold text-n2f-text">{plan.name}</h3>
                 </div>
 
-                <p className="text-3xl font-bold text-n2f-text mb-4">
-                  {!isAdmin && !isFree ? '$xx.xx' : `$${plan.price_monthly}`}
-                  <span className="text-sm font-normal text-n2f-text-secondary">/mo</span>
-                </p>
+                {isEnterprise ? (
+                  <p className="text-2xl font-bold text-n2f-text mb-4">
+                    Custom
+                    <span className="text-sm font-normal text-n2f-text-secondary block">Contact us</span>
+                  </p>
+                ) : (
+                  <p className="text-3xl font-bold text-n2f-text mb-4">
+                    ${plan.price_monthly}
+                    <span className="text-sm font-normal text-n2f-text-secondary">/mo</span>
+                  </p>
+                )}
 
                 <ul className="space-y-2 text-sm text-n2f-text-secondary mb-6">
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
-                    {plan.monthly_request_limit.toLocaleString()} requests/month
+                    <span className={`w-1.5 h-1.5 rounded-full ${planIsUnlimited ? 'bg-emerald-400' : 'bg-n2f-accent'}`} />
+                    {planIsUnlimited ? (
+                      <span className="text-emerald-400 font-semibold">Unlimited requests</span>
+                    ) : (
+                      `${planDailyLimit} requests/day`
+                    )}
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
                     {plan.max_connections === -1
                       ? 'Unlimited'
                       : plan.max_connections}{' '}
-                    connections
+                    connection{plan.max_connections !== 1 ? 's' : ''}
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
                     {plan.features?.support || 'Community'} support
                   </li>
+                  {plan.features?.private_server && (
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-n2f-accent rounded-full" />
+                      Private MCP server
+                    </li>
+                  )}
                 </ul>
 
                 {isCurrent ? (
                   <button disabled className="btn-secondary w-full opacity-50">
                     Current Plan
                   </button>
+                ) : isEnterprise ? (
+                  <a
+                    href="mailto:contact@node2flow.net?subject=Enterprise%20Inquiry"
+                    className="btn-secondary w-full text-center block"
+                  >
+                    Contact Sales
+                  </a>
                 ) : isUpgrade ? (
                   <button
                     className="btn-primary w-full"

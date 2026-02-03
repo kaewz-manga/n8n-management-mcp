@@ -89,9 +89,10 @@ CREATE TABLE IF NOT EXISTS usage_monthly (
 CREATE TABLE IF NOT EXISTS plans (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    monthly_request_limit INTEGER NOT NULL,
-    max_connections INTEGER NOT NULL,
-    price_monthly REAL NOT NULL,
+    daily_request_limit INTEGER DEFAULT -1,  -- -1 = unlimited
+    monthly_request_limit INTEGER NOT NULL,  -- deprecated, use daily_request_limit
+    max_connections INTEGER NOT NULL,        -- -1 = unlimited
+    price_monthly REAL NOT NULL,             -- -1 = contact us
     features TEXT,  -- JSON string
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now'))
@@ -100,11 +101,13 @@ CREATE TABLE IF NOT EXISTS plans (
 -- ============================================
 -- Insert Default Plans
 -- ============================================
-INSERT OR IGNORE INTO plans (id, name, monthly_request_limit, max_connections, price_monthly, features) VALUES
-    ('free', 'Free', 100, 1, 0, '{"support": "community", "analytics": false}'),
-    ('starter', 'Starter', 1000, 3, 9.99, '{"support": "email", "analytics": true}'),
-    ('pro', 'Pro', 10000, 10, 29.99, '{"support": "priority", "analytics": true}'),
-    ('enterprise', 'Enterprise', 100000, -1, 99.99, '{"support": "dedicated", "analytics": true, "sla": true}');
+-- Free: 100 requests/day, 1 connection
+-- Pro: Unlimited requests, 10 connections, $19/month
+-- Enterprise: Contact us (private MCP server)
+INSERT OR IGNORE INTO plans (id, name, daily_request_limit, monthly_request_limit, max_connections, price_monthly, features) VALUES
+    ('free', 'Free', 100, -1, 1, 0, '{"support": "community", "analytics": false}'),
+    ('pro', 'Pro', -1, -1, 10, 19, '{"support": "priority", "analytics": true, "unlimited": true}'),
+    ('enterprise', 'Enterprise', -1, -1, -1, -1, '{"support": "dedicated", "analytics": true, "unlimited": true, "private_server": true, "contact_us": true}');
 
 -- ============================================
 -- Admin Audit Logs Table

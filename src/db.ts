@@ -743,8 +743,45 @@ export function getCurrentYearMonth(): string {
   return `${year}-${month}`;
 }
 
+export function getCurrentDate(): string {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
 export function getNextMonthReset(): string {
   const now = new Date();
   const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   return nextMonth.toISOString();
+}
+
+export function getTomorrowReset(): string {
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return tomorrow.toISOString();
+}
+
+// ============================================
+// Daily Usage Operations (KV-based for performance)
+// ============================================
+
+export async function getDailyUsage(
+  kv: KVNamespace,
+  userId: string,
+  date: string
+): Promise<number> {
+  const key = `daily:${userId}:${date}`;
+  const value = await kv.get(key);
+  return value ? parseInt(value, 10) : 0;
+}
+
+export async function incrementDailyUsage(
+  kv: KVNamespace,
+  userId: string,
+  date: string
+): Promise<number> {
+  const key = `daily:${userId}:${date}`;
+  const current = await getDailyUsage(kv, userId, date);
+  const newValue = current + 1;
+  // TTL: 2 days (48 hours) to ensure cleanup
+  await kv.put(key, String(newValue), { expirationTtl: 172800 });
+  return newValue;
 }
