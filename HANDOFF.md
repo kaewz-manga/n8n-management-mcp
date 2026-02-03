@@ -426,6 +426,7 @@ Claude Desktop config:
 6. **OAuth redirect_uri wrong** - Used `APP_URL` (Dashboard) instead of `url.origin` (Worker) → Fixed (02fd3fa)
 7. **Dashboard sent custom redirect_uri** - Overrode Worker's callback URL → Removed from api.ts (02fd3fa)
 8. **package-lock.json out of sync** - vitest@2.1.9 missing from lock file → Cloudflare Pages `npm ci` failed → Fixed: ran `npm install` to sync (275b97d)
+9. **TypeScript errors after npm fix** - Missing `is_admin` in JWTPayload, missing `oauth_provider` in User, `listCredentials` call removed → Fixed types and code (6f465a2)
 
 ---
 
