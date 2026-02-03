@@ -52,7 +52,7 @@ export default function AdminAnalytics() {
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
-          className="border border-n2f-border rounded-lg text-sm px-3 py-2"
+          className="bg-n2f-card text-n2f-text border border-n2f-border rounded-lg text-sm px-3 py-2"
         >
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>

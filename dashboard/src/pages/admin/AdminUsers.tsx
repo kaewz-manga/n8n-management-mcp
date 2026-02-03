@@ -82,20 +82,20 @@ export default function AdminUsers() {
               placeholder="Search email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-3 py-2 border border-n2f-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-n2f-accent"
+              className="bg-n2f-card text-n2f-text placeholder:text-n2f-text-muted pl-9 pr-3 py-2 border border-n2f-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-n2f-accent"
             />
           </div>
           <button type="submit" className="btn-primary text-sm px-3 py-2">Search</button>
         </form>
 
-        <select value={planFilter} onChange={(e) => { setPlanFilter(e.target.value); setOffset(0); }} className="border border-n2f-border rounded-lg text-sm px-3 py-2">
+        <select value={planFilter} onChange={(e) => { setPlanFilter(e.target.value); setOffset(0); }} className="bg-n2f-card text-n2f-text border border-n2f-border rounded-lg text-sm px-3 py-2">
           <option value="">All Plans</option>
           <option value="free">Free</option>
           <option value="pro">Pro</option>
           <option value="enterprise">Enterprise</option>
         </select>
 
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }} className="border border-n2f-border rounded-lg text-sm px-3 py-2">
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }} className="bg-n2f-card text-n2f-text border border-n2f-border rounded-lg text-sm px-3 py-2">
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
@@ -140,7 +140,7 @@ export default function AdminUsers() {
                       <select
                         value={u.plan}
                         onChange={(e) => handleChangePlan(u.id, e.target.value)}
-                        className="text-sm border border-n2f-border rounded px-2 py-1"
+                        className="bg-n2f-card text-n2f-text text-sm border border-n2f-border rounded px-2 py-1"
                       >
                         <option value="free">Free</option>
                         <option value="pro">Pro</option>
