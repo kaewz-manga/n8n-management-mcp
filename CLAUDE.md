@@ -97,6 +97,9 @@ There is also a **Dashboard** (React 19 SPA) in `dashboard/` deployed on Cloudfl
 | `src/components/AdminLayout.tsx` | Admin panel layout |
 | `src/components/SudoModal.tsx` | TOTP verification modal |
 | `src/pages/Login.tsx` | Email + OAuth login |
+| `src/pages/Register.tsx` | Email + OAuth registration (requires terms acceptance) |
+| `src/pages/Terms.tsx` | Terms of Service page |
+| `src/pages/Privacy.tsx` | Privacy Policy page |
 | `src/pages/Dashboard.tsx` | Overview + stats |
 | `src/pages/Connections.tsx` | n8n connections + API keys |
 | `src/pages/Usage.tsx` | Usage statistics + plan comparison |
@@ -316,6 +319,26 @@ Shared secrets: `AGENT_SECRET` must match on both Vercel and CF Worker.
 
 ## Handoff / Recent Changes (2026-02-04)
 
+### API Key Prefix Changed (Breaking Change)
+- Changed prefix from `saas_` to `n2f_`
+- **Old keys (`saas_xxx`) no longer work** — users must generate new keys
+- Files updated: `crypto-utils.ts`, `auth.ts`, `stdio-server.js`, tests, all docs
+
+### Terms & Privacy Pages Added
+- `/terms` — Terms of Service page
+- `/privacy` — Privacy Policy page
+- Both are public routes (no auth required)
+
+### Registration Flow Changed
+- Terms checkbox now appears **first** at top of register page
+- All form inputs and OAuth buttons **disabled** until checkbox is ticked
+- "Sign in" link remains clickable for existing users
+- OAuth buttons (GitHub/Google) added to register page
+
+### Dashboard Fixes
+- Fixed label: "Monthly Usage" → "Daily Usage" (matches daily limit system)
+- Fixed infinite redirect loop in `useSudo.ts` (check `isAuthenticated()` before API call)
+
 ### TOTP (Two-Factor Authentication) Added
 - Replaced email OTP with **TOTP** (RFC 6238) for sudo mode
 - Users set up 2FA via QR code in Settings → Security
@@ -382,4 +405,4 @@ Shared secrets: `AGENT_SECRET` must match on both Vercel and CF Worker.
 
 ---
 
-**Version**: 1.2 | Updated: 2026-02-04
+**Version**: 1.3 | Updated: 2026-02-04
