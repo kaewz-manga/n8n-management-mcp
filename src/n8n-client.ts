@@ -112,6 +112,7 @@ export class N8nClient {
   async retryExecution(id: string) {
     return this.request(`/api/v1/executions/${id}/retry`, {
       method: 'POST',
+      body: JSON.stringify({}),
     });
   }
 

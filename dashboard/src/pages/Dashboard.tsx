@@ -102,7 +102,7 @@ export default function Dashboard() {
               <p className="stat-value">
                 {usage?.connections.used || 0}
                 <span className="text-lg font-normal text-n2f-text-muted">
-                  /{usage?.connections.limit || 1}
+                  /{usage?.connections.limit === -1 ? '∞' : (usage?.connections.limit || 1)}
                 </span>
               </p>
             </div>

@@ -100,8 +100,8 @@ export default function Layout({ children }: LayoutProps) {
                 </Link>
               );
             })}
-            {/* n8n Management */}
-            {connections.length > 0 && (
+            {/* n8n Management - Admin only */}
+            {isAdmin && connections.length > 0 && (
               <div className="pt-4 mt-4 border-t border-n2f-border">
                 <button
                   onClick={() => setN8nExpanded(!n8nExpanded)}

@@ -26,10 +26,10 @@ export default {
           elevated: '#12141a',
         },
         'n2f-accent': {
-          DEFAULT: '#fbbf24',
-          light: '#fcd34d',
-          dark: '#f59e0b',
-          hover: '#d97706',
+          DEFAULT: '#f97316',
+          light: '#fb923c',
+          dark: '#ea580c',
+          hover: '#c2410c',
         },
         'n2f-text': {
           DEFAULT: '#f9fafb',

@@ -83,9 +83,13 @@ export default function N8nUserList() {
                   <td className="px-4 py-3 text-sm text-n2f-text-secondary">{user.email || '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                      user.role === 'global:owner' ? 'bg-purple-900/30 text-purple-400' : 'bg-n2f-accent/10 text-n2f-accent'
+                      user.role?.includes('owner') ? 'bg-purple-900/30 text-purple-400' :
+                      user.role?.includes('admin') ? 'bg-blue-900/30 text-blue-400' :
+                      'bg-n2f-accent/10 text-n2f-accent'
                     }`}>
-                      {user.role === 'global:owner' ? 'Owner' : 'Member'}
+                      {user.role?.includes('owner') ? 'Owner' :
+                       user.role?.includes('admin') ? 'Admin' :
+                       user.role || 'Member'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
