@@ -19,7 +19,7 @@
 
 **n8n MCP SaaS** - แพลตฟอร์ม SaaS ที่ให้บริการ MCP Server สำหรับเชื่อมต่อ AI clients (Claude, Cursor, etc.) กับ n8n automation platform
 
-**Value**: ลูกค้าสมัคร → เพิ่ม n8n instance → ได้ API key `saas_xxx` → ใช้ AI ควบคุม n8n workflows ได้เลย
+**Value**: ลูกค้าสมัคร → เพิ่ม n8n instance → ได้ API key `n2f_xxx` → ใช้ AI ควบคุม n8n workflows ได้เลย
 
 ### Connected Projects
 
@@ -32,7 +32,7 @@ The **n8n-mcp-agent** project has been **moved out** to a separate repository (p
 It connects to this Worker via:
 - HMAC-SHA256 for AI/bot configs (`/api/agent/config`, `/api/agent/bot-config`)
 - JWT for dashboard CRUD
-- `saas_` API key for MCP tools
+- `n2f_` API key for MCP tools
 
 ---
 
@@ -50,7 +50,7 @@ It connects to this Worker via:
 - **Worker deployed** - Cloudflare Workers
 - **Stripe integration** - `src/stripe.ts` - Checkout session, billing portal, webhook handler
 - **OAuth working** - GitHub + Google OAuth login ใช้งานได้ (tested 2026-01-31)
-- **stdio-server.js** - รองรับทั้ง SaaS API key mode (`saas_xxx`) และ Direct n8n mode
+- **stdio-server.js** - รองรับทั้ง SaaS API key mode (`n2f_xxx`) และ Direct n8n mode
 - **Custom domains** - Worker: `n8n-management-mcp.node2flow.net`, Dashboard: `n8n-management-dashboard.node2flow.net`
 - **Monitoring** - Cloudflare Observability enabled
 - **AI Connections** - BYOK AI provider credentials (OpenAI, Anthropic, Google) - CRUD + AES-GCM encryption
@@ -133,7 +133,7 @@ It connects to this Worker via:
 │  Cursor / etc.   │     │  n8n-management-dashboard.node2flow.net│
 └────────┬────────┘     └─────────────┬──────────────────────────┘
          │ MCP (JSON-RPC)             │ REST API
-         │ Bearer saas_xxx            │ Bearer JWT
+         │ Bearer n2f_xxx            │ Bearer JWT
          ▼                            ▼
 ┌──────────────────────────────────────────────────────┐
 │  Cloudflare Worker (n8n-mcp-saas)                    │
@@ -246,7 +246,7 @@ n8n-management-mcp/
 | `/api/user/password` | PUT | Change password |
 | `/api/user` | DELETE | Delete account (soft delete) |
 | `/api/connections` | GET | List n8n connections + API keys |
-| `/api/connections` | POST | Add n8n connection → returns `saas_xxx` key |
+| `/api/connections` | POST | Add n8n connection → returns `n2f_xxx` key |
 | `/api/connections/:id` | DELETE | Delete connection |
 | `/api/connections/:id/api-keys` | POST | Generate new API key |
 | `/api/api-keys/:id` | DELETE | Revoke API key |
@@ -335,7 +335,7 @@ OAuth (GitHub/Google):
   → Worker redirects to Dashboard /auth/callback?token=xxx
 
 MCP:
-  Bearer saas_xxx → SHA-256 hash → lookup api_keys → get user + connection → decrypt n8n key (AES-GCM) → call n8n API → track usage
+  Bearer n2f_xxx → SHA-256 hash → lookup api_keys → get user + connection → decrypt n8n key (AES-GCM) → call n8n API → track usage
 
 Stripe:
   Checkout → Stripe hosted page → webhook (checkout.session.completed) → update plan
@@ -394,7 +394,7 @@ gh workflow run deploy.yml   # Trigger GitHub Actions
 
 ```bash
 # SaaS mode (connects through SaaS platform)
-node stdio-server.js saas_YOUR_API_KEY
+node stdio-server.js n2f_YOUR_API_KEY
 SAAS_API_KEY=saas_xxx node stdio-server.js
 
 # Direct mode (connects directly to n8n)
@@ -408,7 +408,7 @@ Claude Desktop config:
   "mcpServers": {
     "n8n": {
       "command": "node",
-      "args": ["path/to/stdio-server.js", "saas_YOUR_API_KEY"]
+      "args": ["path/to/stdio-server.js", "n2f_YOUR_API_KEY"]
     }
   }
 }

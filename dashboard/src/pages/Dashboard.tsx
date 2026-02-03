@@ -145,7 +145,7 @@ export default function Dashboard() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-n2f-text">
-            Monthly Usage
+            Daily Usage
           </h2>
           <span className="text-sm text-n2f-text-secondary">
             Resets {usage?.reset_at ? new Date(usage.reset_at).toLocaleDateString() : 'next month'}
@@ -174,7 +174,7 @@ export default function Dashboard() {
             />
           </div>
           <p className="text-xs text-n2f-text-secondary">
-            {usagePercent}% of monthly limit used
+            {usagePercent}% of daily limit used
           </p>
         </div>
       </div>

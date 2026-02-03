@@ -21,6 +21,8 @@ import ExecutionList from './pages/n8n/ExecutionList';
 import CredentialList from './pages/n8n/CredentialList';
 import TagList from './pages/n8n/TagList';
 import N8nUserList from './pages/n8n/N8nUserList';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import { ConnectionProvider } from './contexts/ConnectionContext';
 import { SudoProvider } from './contexts/SudoContext';
 import { Loader2 } from 'lucide-react';
@@ -86,6 +88,10 @@ function AppRoutes() {
         }
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
+
+      {/* Legal pages - public, no redirect if logged in */}
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Protected routes */}
       <Route

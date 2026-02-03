@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSudoStatus, verifySudoTOTP, type SudoStatus } from '../lib/api';
+import { getSudoStatus, verifySudoTOTP, isAuthenticated } from '../lib/api';
 
 interface UseSudoReturn {
   /** Whether sudo mode is currently active */
@@ -32,6 +32,10 @@ export function useSudo(): UseSudoReturn {
   const [error, setError] = useState<string | null>(null);
 
   const refreshStatus = useCallback(async () => {
+    // Don't call API if not authenticated - prevents 401 redirect loop
+    if (!isAuthenticated()) {
+      return;
+    }
     try {
       const res = await getSudoStatus();
       if (res.success && res.data) {
@@ -49,20 +53,12 @@ export function useSudo(): UseSudoReturn {
     refreshStatus();
 
     const interval = setInterval(() => {
-      // Check if sudo expired locally first
-      if (sudoExpiresAt) {
-        const expiryTime = new Date(sudoExpiresAt).getTime();
-        if (Date.now() > expiryTime) {
-          setHasSudo(false);
-          setSudoExpiresAt(null);
-          return;
-        }
-      }
       refreshStatus();
     }, SUDO_CHECK_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [refreshStatus, sudoExpiresAt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const verifyTOTP = useCallback(async (code: string): Promise<boolean> => {
     setLoading(true);

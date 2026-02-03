@@ -12,6 +12,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +25,11 @@ export default function Register() {
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError('You must accept the Terms of Service and Privacy Policy');
       return;
     }
 
@@ -151,9 +157,25 @@ export default function Register() {
             </button>
           </div>
 
-          <p className="text-xs text-center text-n2f-text-muted">
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
-          </p>
+          <div className="flex items-start gap-3">
+            <input
+              id="terms"
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-n2f-border bg-n2f-card text-n2f-accent focus:ring-n2f-accent focus:ring-offset-0 cursor-pointer"
+            />
+            <label htmlFor="terms" className="text-sm text-n2f-text-muted cursor-pointer">
+              I agree to the{' '}
+              <Link to="/terms" className="text-n2f-accent hover:text-n2f-accent-light">
+                Terms of Service
+              </Link>
+              {' '}and{' '}
+              <Link to="/privacy" className="text-n2f-accent hover:text-n2f-accent-light">
+                Privacy Policy
+              </Link>
+            </label>
+          </div>
         </form>
       </div>
     </div>

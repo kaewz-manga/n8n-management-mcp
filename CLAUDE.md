@@ -27,7 +27,7 @@ There is also a **Dashboard** (React 19 SPA) in `dashboard/` deployed on Cloudfl
 │  Cursor / etc.   │     │  (React SPA)     │     │  (Vercel Next.js) │
 └────────┬────────┘     └────────┬─────────┘     └────────┬──────────┘
          │ MCP JSON-RPC          │ REST + JWT              │ HMAC + JWT
-         │ Bearer saas_xxx       │                         │
+         │ Bearer n2f_xxx       │                         │
          ▼                       ▼                         ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │  Cloudflare Worker (this project)                                │
@@ -145,7 +145,7 @@ Key relationships:
 |------|---------|-----|
 | **Email/Password** | Dashboard login | PBKDF2 hash → JWT (24 hours) |
 | **OAuth 2.0** | Dashboard login | GitHub/Google → JWT |
-| **SaaS API Key** | MCP clients | `Bearer saas_xxx` → SHA-256 lookup → decrypt n8n key |
+| **SaaS API Key** | MCP clients | `Bearer n2f_xxx` → SHA-256 lookup → decrypt n8n key |
 | **HMAC-SHA256** | Vercel agent | `HMAC(AGENT_SECRET, "userId:aiConnectionId")` → decrypt AI/bot keys |
 
 ---
@@ -293,7 +293,7 @@ wrangler secret put SECRET_NAME
 
 The Vercel Next.js app (`n8n-mcp-agent/`) connects to this Worker:
 
-- **Chat API** (`/api/chat`) → calls `/api/agent/config` (HMAC) to get AI credentials, then `/mcp` (saas_ key) for tools
+- **Chat API** (`/api/chat`) → calls `/api/agent/config` (HMAC) to get AI credentials, then `/mcp` (n2f_ key) for tools
 - **Dashboard UI** → calls JWT-protected endpoints directly from browser
 - **Webhooks** (`/api/webhook/telegram/[userId]`, `/api/webhook/line/[userId]`) → calls `/api/agent/bot-config` (HMAC)
 

@@ -131,7 +131,7 @@
 1. Client sends MCP request
    ┌─────────────────────────────────────────┐
    │ POST /mcp                               │
-   │ Authorization: Bearer saas_abc123       │
+   │ Authorization: Bearer n2f_abc123       │
    │ Content-Type: application/json          │
    │                                         │
    │ {                                       │
@@ -424,7 +424,7 @@ GET    /api/billing/invoices         # List invoices
 ```
 POST /mcp
 Headers:
-  - Authorization: Bearer {saas_api_key}
+  - Authorization: Bearer {n2f_api_key}
   - Content-Type: application/json
 
 Body: JSON-RPC 2.0 (MCP Protocol)
@@ -482,7 +482,7 @@ X-RateLimit-Reset: 2024-02-01T00:00:00Z
 |---------|----------|
 | Password Storage | bcrypt hash with salt |
 | Session Management | JWT with short expiry + refresh tokens |
-| API Key Format | `saas_{random_32_chars}` |
+| API Key Format | `n2f_{random_32_chars}` |
 | API Key Storage | SHA-256 hash (never store plaintext) |
 
 ### 6.2 Data Protection
@@ -507,7 +507,7 @@ X-RateLimit-Reset: 2024-02-01T00:00:00Z
 Generation:
 1. Generate 32 random bytes
 2. Encode as base64url
-3. Prefix with "saas_"
+3. Prefix with "n2f_"
 4. Return to user ONCE
 5. Store SHA-256 hash in database
 

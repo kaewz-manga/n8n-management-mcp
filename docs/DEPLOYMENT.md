@@ -140,7 +140,7 @@ curl -X POST http://localhost:8787/api/connections \
 # Test MCP endpoint (use api_key from connection response)
 curl -X POST http://localhost:8787/mcp \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer saas_YOUR_API_KEY" \
+  -H "Authorization: Bearer n2f_YOUR_API_KEY" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,

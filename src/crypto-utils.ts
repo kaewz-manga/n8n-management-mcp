@@ -202,8 +202,8 @@ export async function generateApiKey(): Promise<{ key: string; hash: string; pre
   // Generate 32 random bytes
   const randomBytes = crypto.getRandomValues(new Uint8Array(32));
   const keyBody = base64UrlEncode(String.fromCharCode(...randomBytes));
-  const key = `saas_${keyBody}`;
-  const prefix = key.substring(0, 12); // "saas_" + 7 chars
+  const key = `n2f_${keyBody}`;
+  const prefix = key.substring(0, 11); // "n2f_" + 7 chars
 
   // Hash the key for storage
   const hash = await hashApiKey(key);

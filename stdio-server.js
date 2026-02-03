@@ -3,8 +3,8 @@
  * n8n MCP Server for Claude Desktop (stdio mode)
  *
  * Usage (SaaS mode):
- *   node stdio-server.js saas_YOUR_API_KEY
- *   SAAS_API_KEY=saas_xxx node stdio-server.js
+ *   node stdio-server.js n2f_YOUR_API_KEY
+ *   SAAS_API_KEY=n2f_xxx node stdio-server.js
  *
  * Usage (Direct mode):
  *   node stdio-server.js <N8N_URL> <N8N_API_KEY>
@@ -25,9 +25,9 @@ const SAAS_URL = 'https://n8n-mcp-saas.suphakitm99.workers.dev';
  * Returns { mode: 'saas', saasApiKey } or { mode: 'direct', apiUrl, apiKey }.
  */
 function getN8nConfig() {
-  // Mode 1: SaaS - single arg starting with saas_ or SAAS_API_KEY env var
+  // Mode 1: SaaS - single arg starting with n2f_ or SAAS_API_KEY env var
   const saasKey = process.env.SAAS_API_KEY ||
-    (process.argv[2] && process.argv[2].startsWith('saas_') ? process.argv[2] : null);
+    (process.argv[2] && process.argv[2].startsWith('n2f_') ? process.argv[2] : null);
 
   if (saasKey) {
     return { mode: 'saas', saasApiKey: saasKey };
@@ -44,8 +44,8 @@ function getN8nConfig() {
   // Mode 3: Show usage
   console.error('Error: Missing configuration');
   console.error('\nUsage (SaaS mode):');
-  console.error('  node stdio-server.js saas_YOUR_API_KEY');
-  console.error('  SAAS_API_KEY=saas_xxx node stdio-server.js');
+  console.error('  node stdio-server.js n2f_YOUR_API_KEY');
+  console.error('  SAAS_API_KEY=n2f_xxx node stdio-server.js');
   console.error('\nUsage (Direct mode):');
   console.error('  node stdio-server.js <N8N_URL> <N8N_API_KEY>');
   console.error('  N8N_URL=https://your-n8n.com N8N_API_KEY=your_key node stdio-server.js');

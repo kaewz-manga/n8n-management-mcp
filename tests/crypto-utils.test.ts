@@ -49,10 +49,10 @@ describe('Crypto Utils', () => {
     it('should generate API key with correct format', async () => {
       const { key, hash, prefix } = await generateApiKey();
 
-      // API key format: saas_ + base64url encoded random bytes
-      expect(key).toMatch(/^saas_[A-Za-z0-9_-]+$/);
+      // API key format: n2f_ + base64url encoded random bytes
+      expect(key).toMatch(/^n2f_[A-Za-z0-9_-]+$/);
       expect(key.length).toBeGreaterThan(20);
-      expect(prefix).toBe(key.substring(0, 12));
+      expect(prefix).toBe(key.substring(0, 11));
       expect(hash).toBeDefined();
       expect(hash.length).toBeGreaterThan(0);
     });
