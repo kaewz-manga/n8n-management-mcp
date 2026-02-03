@@ -2,7 +2,7 @@
 
 > Context สำหรับ Claude ตัวใหม่ที่จะทำงานต่อ
 
-**Updated**: 2026-02-03
+**Updated**: 2026-02-04
 **GitHub**: https://github.com/kaewz-manga/n8n-management-mcp
 
 ### Production URLs
@@ -36,7 +36,17 @@ It connects to this Worker via:
 
 ---
 
-## สถานะปัจจุบัน (2026-02-02)
+## สถานะปัจจุบัน (2026-02-04)
+
+### ✅ ล่าสุด (2026-02-04)
+
+- **API Key Prefix เปลี่ยน** - `saas_` → `n2f_` (Breaking change! key เก่าใช้ไม่ได้)
+- **Terms of Service** - หน้า `/terms` พร้อม legal content
+- **Privacy Policy** - หน้า `/privacy` พร้อม legal content
+- **Registration Flow ใหม่** - ต้องติ๊กยอมรับ Terms ก่อนถึงจะกรอกข้อมูลหรือใช้ OAuth ได้
+- **OAuth บน Register** - เพิ่มปุ่ม GitHub/Google login ในหน้า register
+- **Dashboard Label Fix** - เปลี่ยน "Monthly Usage" เป็น "Daily Usage" (ตาม plan system ใหม่)
+- **Bug Fix** - แก้ infinite redirect loop ใน useSudo hook (เช็ค isAuthenticated ก่อนเรียก API)
 
 ### ✅ ทำเสร็จ + Deploy แล้ว
 
@@ -433,7 +443,7 @@ Claude Desktop config:
 ## Test Account
 
 - Email: `admin@node2flow.net`
-- Plan: free (100 req/mo)
+- Plan: free (100 req/day)
 - Connection: n8n-no1 (https://n8n-no1.missmanga.org)
 
 ---
@@ -441,6 +451,9 @@ Claude Desktop config:
 ## Git History (Key Commits)
 
 ```
+25a0e36 feat: require terms acceptance before registration
+84a8529 feat: add terms/privacy pages, signup checkbox, change API key prefix to n2f_
+6b3dd2a feat: add TOTP two-factor authentication for sudo mode
 275b97d fix: sync package-lock.json with package.json
 1c3007b Apply dark theme across entire dashboard
 ea52536 Blur only paid plan cards, keep free plan visible
