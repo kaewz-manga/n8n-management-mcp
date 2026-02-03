@@ -144,6 +144,56 @@ export async function deleteUser(db: D1Database, userId: string): Promise<void> 
 }
 
 // ============================================
+// TOTP Operations
+// ============================================
+
+export async function setUserTOTPSecret(
+  db: D1Database,
+  userId: string,
+  totpSecretEncrypted: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET totp_secret_encrypted = ?, updated_at = ? WHERE id = ?')
+    .bind(totpSecretEncrypted, new Date().toISOString(), userId)
+    .run();
+}
+
+export async function enableUserTOTP(
+  db: D1Database,
+  userId: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET totp_enabled = 1, updated_at = ? WHERE id = ?')
+    .bind(new Date().toISOString(), userId)
+    .run();
+}
+
+export async function disableUserTOTP(
+  db: D1Database,
+  userId: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET totp_enabled = 0, totp_secret_encrypted = NULL, updated_at = ? WHERE id = ?')
+    .bind(new Date().toISOString(), userId)
+    .run();
+}
+
+export async function getUserTOTPStatus(
+  db: D1Database,
+  userId: string
+): Promise<{ enabled: boolean; hasSecret: boolean }> {
+  const result = await db
+    .prepare('SELECT totp_enabled, totp_secret_encrypted FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ totp_enabled: number; totp_secret_encrypted: string | null }>();
+
+  return {
+    enabled: result?.totp_enabled === 1,
+    hasSecret: !!result?.totp_secret_encrypted,
+  };
+}
+
+// ============================================
 // n8n Connection Operations
 // ============================================
 

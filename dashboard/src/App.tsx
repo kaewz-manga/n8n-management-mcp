@@ -22,6 +22,7 @@ import CredentialList from './pages/n8n/CredentialList';
 import TagList from './pages/n8n/TagList';
 import N8nUserList from './pages/n8n/N8nUserList';
 import { ConnectionProvider } from './contexts/ConnectionContext';
+import { SudoProvider } from './contexts/SudoContext';
 import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -155,9 +156,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ConnectionProvider>
-            <AppRoutes />
-          </ConnectionProvider>
+          <SudoProvider>
+            <ConnectionProvider>
+              <AppRoutes />
+            </ConnectionProvider>
+          </SudoProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

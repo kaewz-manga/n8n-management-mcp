@@ -12,6 +12,9 @@ import {
   hashApiKey,
   encrypt,
   decrypt,
+  generateTOTPSecret,
+  generateTOTPUri,
+  verifyTOTP,
 } from './crypto-utils';
 import {
   createUser,
@@ -31,6 +34,10 @@ import {
   getMinuteUsage,
   getCurrentMinuteKey,
   countUserConnections,
+  setUserTOTPSecret,
+  enableUserTOTP,
+  disableUserTOTP,
+  getUserTOTPStatus,
 } from './db';
 
 // ============================================
@@ -585,4 +592,200 @@ export async function verifyAdminToken(
   if (!user || (user as any).is_admin !== 1) return null;
 
   return { userId: user.id, email: user.email };
+}
+
+// ============================================
+// Sudo Mode (TOTP Verification)
+// ============================================
+
+const SUDO_SESSION_TTL = 900; // 15 minutes
+const SUDO_MAX_ATTEMPTS = 5;
+const SUDO_ATTEMPT_TTL = 300; // 5 minutes lockout after max attempts
+
+/**
+ * Verify sudo using TOTP and create sudo session
+ */
+export async function verifySudoTOTP(
+  db: D1Database,
+  kv: KVNamespace,
+  encryptionKey: string,
+  userId: string,
+  totpCode: string
+): Promise<{ success: boolean; error?: string }> {
+  // Check if locked out due to too many attempts
+  const attemptsKey = `sudo_attempts:${userId}`;
+  const attemptsData = await kv.get(attemptsKey);
+  let attempts = attemptsData ? parseInt(attemptsData, 10) : 0;
+
+  if (attempts >= SUDO_MAX_ATTEMPTS) {
+    return {
+      success: false,
+      error: 'Too many failed attempts. Please wait 5 minutes.',
+    };
+  }
+
+  // Get user's TOTP secret
+  const user = await getUserById(db, userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  const userWithTOTP = user as any;
+  if (!userWithTOTP.totp_enabled || !userWithTOTP.totp_secret_encrypted) {
+    return { success: false, error: 'TOTP is not enabled. Please set up 2FA first.' };
+  }
+
+  // Decrypt TOTP secret
+  let totpSecret: string;
+  try {
+    totpSecret = await decrypt(userWithTOTP.totp_secret_encrypted, encryptionKey);
+  } catch {
+    return { success: false, error: 'Failed to verify TOTP' };
+  }
+
+  // Verify TOTP code
+  const isValid = await verifyTOTP(totpSecret, totpCode);
+  if (!isValid) {
+    // Increment attempts
+    attempts++;
+    await kv.put(attemptsKey, String(attempts), { expirationTtl: SUDO_ATTEMPT_TTL });
+    const remaining = SUDO_MAX_ATTEMPTS - attempts;
+    return {
+      success: false,
+      error: remaining > 0
+        ? `Invalid code. ${remaining} attempts remaining.`
+        : 'Too many failed attempts. Please wait 5 minutes.',
+    };
+  }
+
+  // Success - clear attempts and create sudo session
+  await kv.delete(attemptsKey);
+
+  const expiresAt = new Date(Date.now() + SUDO_SESSION_TTL * 1000).toISOString();
+  await kv.put(`sudo_session:${userId}`, expiresAt, { expirationTtl: SUDO_SESSION_TTL });
+
+  return { success: true };
+}
+
+// ============================================
+// TOTP Setup
+// ============================================
+
+/**
+ * Generate TOTP setup data (secret + QR code URI)
+ * Stores secret temporarily in KV until user verifies
+ */
+export async function setupTOTP(
+  kv: KVNamespace,
+  encryptionKey: string,
+  userId: string,
+  email: string
+): Promise<{ secret: string; uri: string; qrCodeUrl: string }> {
+  // Generate new TOTP secret
+  const secret = generateTOTPSecret();
+
+  // Generate otpauth URI
+  const uri = generateTOTPUri(secret, email);
+
+  // Generate QR code URL using Google Charts API (simple, no dependencies)
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
+
+  // Store encrypted secret temporarily (user must verify before enabling)
+  const encryptedSecret = await encrypt(secret, encryptionKey);
+  await kv.put(`totp_setup:${userId}`, encryptedSecret, { expirationTtl: 600 }); // 10 minutes
+
+  return { secret, uri, qrCodeUrl };
+}
+
+/**
+ * Verify TOTP setup and enable for user
+ */
+export async function verifyTOTPSetup(
+  db: D1Database,
+  kv: KVNamespace,
+  encryptionKey: string,
+  userId: string,
+  totpCode: string
+): Promise<{ success: boolean; error?: string }> {
+  // Get pending TOTP secret from KV
+  const pendingSecret = await kv.get(`totp_setup:${userId}`);
+  if (!pendingSecret) {
+    return { success: false, error: 'No pending TOTP setup. Please start again.' };
+  }
+
+  // Decrypt the secret
+  let secret: string;
+  try {
+    secret = await decrypt(pendingSecret, encryptionKey);
+  } catch {
+    return { success: false, error: 'Failed to verify setup' };
+  }
+
+  // Verify the code
+  const isValid = await verifyTOTP(secret, totpCode);
+  if (!isValid) {
+    return { success: false, error: 'Invalid code. Please try again.' };
+  }
+
+  // Success - save encrypted secret to DB and enable TOTP
+  await setUserTOTPSecret(db, userId, pendingSecret);
+  await enableUserTOTP(db, userId);
+
+  // Clean up pending setup
+  await kv.delete(`totp_setup:${userId}`);
+
+  return { success: true };
+}
+
+/**
+ * Disable TOTP for user (requires password verification)
+ */
+export async function disableTOTP(
+  db: D1Database,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  await disableUserTOTP(db, userId);
+  return { success: true };
+}
+
+/**
+ * Get TOTP status for user
+ */
+export async function getTOTPStatus(
+  db: D1Database,
+  userId: string
+): Promise<{ enabled: boolean }> {
+  const status = await getUserTOTPStatus(db, userId);
+  return { enabled: status.enabled };
+}
+
+/**
+ * Check if user has an active sudo session
+ */
+export async function hasSudoSession(
+  kv: KVNamespace,
+  userId: string
+): Promise<{ active: boolean; expires_at?: string }> {
+  const expiresAt = await kv.get(`sudo_session:${userId}`);
+  if (!expiresAt) {
+    return { active: false };
+  }
+
+  // Check if still valid
+  const expiryTime = new Date(expiresAt).getTime();
+  if (Date.now() > expiryTime) {
+    return { active: false };
+  }
+
+  return { active: true, expires_at: expiresAt };
+}
+
+/**
+ * Revoke sudo session (logout from sudo mode)
+ */
+export async function revokeSudoSession(
+  kv: KVNamespace,
+  userId: string
+): Promise<void> {
+  await kv.delete(`sudo_session:${userId}`);
 }

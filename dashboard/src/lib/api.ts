@@ -463,3 +463,57 @@ export async function getAdminErrors(limit?: number): Promise<ApiResponse<{ erro
 export async function getAdminErrorTrend(days?: number): Promise<ApiResponse<{ trend: { date: string; count: number }[] }>> {
   return request(`/api/admin/health/error-trend${days ? `?days=${days}` : ''}`);
 }
+
+// ============================================
+// Sudo Mode (TOTP-based Security Verification)
+// ============================================
+
+export interface SudoStatus {
+  active: boolean;
+  expires_at?: string;
+  totp_enabled?: boolean;
+}
+
+export async function verifySudoTOTP(code: string): Promise<ApiResponse<{ message: string; expires_at: string }>> {
+  return request('/api/auth/verify-sudo', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function getSudoStatus(): Promise<ApiResponse<SudoStatus>> {
+  return request('/api/auth/sudo-status');
+}
+
+// ============================================
+// TOTP Setup
+// ============================================
+
+export interface TOTPSetupData {
+  secret: string;
+  uri: string;
+  qr_code_url: string;
+  message: string;
+}
+
+export async function setupTOTP(): Promise<ApiResponse<TOTPSetupData>> {
+  return request('/api/auth/totp/setup', { method: 'POST' });
+}
+
+export async function enableTOTP(code: string): Promise<ApiResponse<{ message: string }>> {
+  return request('/api/auth/totp/enable', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function getTOTPStatus(): Promise<ApiResponse<{ enabled: boolean }>> {
+  return request('/api/auth/totp/status');
+}
+
+export async function disableTOTP(password?: string): Promise<ApiResponse<{ message: string }>> {
+  return request('/api/auth/totp/disable', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  });
+}

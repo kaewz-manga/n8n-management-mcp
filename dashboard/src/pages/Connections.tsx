@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Connection } from '../lib/api';
 import {
   getConnections,
@@ -7,6 +8,7 @@ import {
   createApiKey,
   revokeApiKey,
 } from '../lib/api';
+import { useSudoContext } from '../contexts/SudoContext';
 import {
   Plus,
   Trash2,
@@ -18,9 +20,11 @@ import {
   ExternalLink,
   RefreshCw,
   X,
+  Shield,
 } from 'lucide-react';
 
 export default function Connections() {
+  const { withSudo, totpEnabled } = useSudoContext();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,39 +82,75 @@ export default function Connections() {
   };
 
   const handleDeleteConnection = async (id: string) => {
+    if (!totpEnabled) {
+      alert('Please enable Two-Factor Authentication in Settings to perform this action.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this connection? All API keys will be revoked.')) {
       return;
     }
 
-    const res = await deleteConnection(id);
-    if (res.success) {
-      fetchConnections();
-    } else {
-      alert(res.error?.message || 'Failed to delete connection');
+    const result = await withSudo(async () => {
+      const res = await deleteConnection(id);
+      if (res.success) {
+        fetchConnections();
+      } else {
+        alert(res.error?.message || 'Failed to delete connection');
+      }
+      return true;
+    });
+
+    if (result === null && totpEnabled) {
+      // User cancelled sudo modal
     }
   };
 
   const handleGenerateApiKey = async (connectionId: string) => {
-    const res = await createApiKey(connectionId);
-    if (res.success && res.data) {
-      setNewApiKey(res.data.api_key);
-      setShowApiKeyModal(true);
-      fetchConnections();
-    } else {
-      alert(res.error?.message || 'Failed to generate API key');
+    if (!totpEnabled) {
+      alert('Please enable Two-Factor Authentication in Settings to perform this action.');
+      return;
+    }
+
+    const result = await withSudo(async () => {
+      const res = await createApiKey(connectionId);
+      if (res.success && res.data) {
+        setNewApiKey(res.data.api_key);
+        setShowApiKeyModal(true);
+        fetchConnections();
+      } else {
+        alert(res.error?.message || 'Failed to generate API key');
+      }
+      return true;
+    });
+
+    if (result === null && totpEnabled) {
+      // User cancelled sudo modal
     }
   };
 
   const handleRevokeApiKey = async (keyId: string) => {
+    if (!totpEnabled) {
+      alert('Please enable Two-Factor Authentication in Settings to perform this action.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to revoke this API key?')) {
       return;
     }
 
-    const res = await revokeApiKey(keyId);
-    if (res.success) {
-      fetchConnections();
-    } else {
-      alert(res.error?.message || 'Failed to revoke API key');
+    const result = await withSudo(async () => {
+      const res = await revokeApiKey(keyId);
+      if (res.success) {
+        fetchConnections();
+      } else {
+        alert(res.error?.message || 'Failed to revoke API key');
+      }
+      return true;
+    });
+
+    if (result === null && totpEnabled) {
+      // User cancelled sudo modal
     }
   };
 
@@ -143,6 +183,23 @@ export default function Connections() {
           Add Connection
         </button>
       </div>
+
+      {!totpEnabled && (
+        <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-amber-400" />
+            <div>
+              <p className="text-amber-300 font-medium">Enable Two-Factor Authentication</p>
+              <p className="text-sm text-amber-300/80">
+                Set up 2FA to manage connections securely (delete, generate/revoke API keys)
+              </p>
+            </div>
+          </div>
+          <Link to="/settings" className="btn-secondary text-amber-400 border-amber-600 hover:bg-amber-900/30">
+            Enable 2FA
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 flex items-center gap-3">

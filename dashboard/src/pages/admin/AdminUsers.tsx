@@ -6,9 +6,11 @@ import {
   deleteAdminUser,
   type AdminUser,
 } from '../../lib/api';
-import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { useSudoContext } from '../../contexts/SudoContext';
+import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Shield } from 'lucide-react';
 
 export default function AdminUsers() {
+  const { withSudo, totpEnabled } = useSudoContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -59,10 +61,17 @@ export default function AdminUsers() {
   }
 
   async function handleDelete(userId: string, email: string) {
+    if (!totpEnabled) {
+      alert('Please enable Two-Factor Authentication in Settings to perform this action.');
+      return;
+    }
     if (!confirm(`Delete user ${email}? This cannot be undone.`)) return;
-    const res = await deleteAdminUser(userId);
-    if (res.success) fetchUsers();
-    else alert(res.error?.message || 'Failed');
+    await withSudo(async () => {
+      const res = await deleteAdminUser(userId);
+      if (res.success) fetchUsers();
+      else alert(res.error?.message || 'Failed');
+      return true;
+    });
   }
 
   return (

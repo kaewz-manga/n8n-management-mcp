@@ -1,7 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { changePassword, deleteAccount, updateSessionDuration } from '../lib/api';
-import { User, Mail, Shield, Trash2, Loader2, Check, AlertCircle, X, Clock } from 'lucide-react';
+import { useSudoContext } from '../contexts/SudoContext';
+import {
+  changePassword,
+  deleteAccount,
+  updateSessionDuration,
+  setupTOTP,
+  enableTOTP,
+  disableTOTP,
+  getTOTPStatus,
+  type TOTPSetupData,
+} from '../lib/api';
+import { User, Mail, Shield, Trash2, Loader2, Check, AlertCircle, X, Clock, Smartphone, QrCode, Copy, CheckCircle } from 'lucide-react';
 
 const SESSION_OPTIONS = [
   { value: 3600, label: '1 hour' },
@@ -12,6 +22,18 @@ const SESSION_OPTIONS = [
 
 export default function Settings() {
   const { user, logout, refreshUser } = useAuth();
+  const { withSudo, totpEnabled: contextTotpEnabled } = useSudoContext();
+
+  // TOTP state
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpSetupData, setTotpSetupData] = useState<TOTPSetupData | null>(null);
+  const [totpCode, setTotpCode] = useState('');
+  const [totpError, setTotpError] = useState('');
+  const [totpSuccess, setTotpSuccess] = useState('');
+  const [secretCopied, setSecretCopied] = useState(false);
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
 
   // Password change state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -34,6 +56,87 @@ export default function Settings() {
   const [deleteError, setDeleteError] = useState('');
 
   const isOAuthUser = !!user?.oauth_provider;
+
+  // Load TOTP status on mount
+  useEffect(() => {
+    loadTOTPStatus();
+  }, []);
+
+  // Sync with context
+  useEffect(() => {
+    setTotpEnabled(contextTotpEnabled);
+  }, [contextTotpEnabled]);
+
+  const loadTOTPStatus = async () => {
+    const res = await getTOTPStatus();
+    if (res.success && res.data) {
+      setTotpEnabled(res.data.enabled);
+    }
+  };
+
+  const handleSetupTOTP = async () => {
+    setTotpLoading(true);
+    setTotpError('');
+
+    const res = await setupTOTP();
+    setTotpLoading(false);
+
+    if (res.success && res.data) {
+      setTotpSetupData(res.data);
+    } else {
+      setTotpError(res.error?.message || 'Failed to start TOTP setup');
+    }
+  };
+
+  const handleEnableTOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (totpCode.length !== 6) {
+      setTotpError('Please enter a 6-digit code');
+      return;
+    }
+
+    setTotpLoading(true);
+    setTotpError('');
+
+    const res = await enableTOTP(totpCode);
+    setTotpLoading(false);
+
+    if (res.success) {
+      setTotpSuccess('Two-factor authentication enabled successfully!');
+      setTotpSetupData(null);
+      setTotpCode('');
+      setTotpEnabled(true);
+      setTimeout(() => setTotpSuccess(''), 3000);
+    } else {
+      setTotpError(res.error?.message || 'Invalid code. Please try again.');
+    }
+  };
+
+  const handleDisableTOTP = async () => {
+    setTotpLoading(true);
+    setTotpError('');
+
+    const res = await disableTOTP(isOAuthUser ? undefined : disablePassword);
+    setTotpLoading(false);
+
+    if (res.success) {
+      setTotpSuccess('Two-factor authentication disabled');
+      setTotpEnabled(false);
+      setShowDisableConfirm(false);
+      setDisablePassword('');
+      setTimeout(() => setTotpSuccess(''), 3000);
+    } else {
+      setTotpError(res.error?.message || 'Failed to disable TOTP');
+    }
+  };
+
+  const handleCopySecret = () => {
+    if (totpSetupData?.secret) {
+      navigator.clipboard.writeText(totpSetupData.secret);
+      setSecretCopied(true);
+      setTimeout(() => setSecretCopied(false), 2000);
+    }
+  };
 
   const handleSessionDurationChange = async (seconds: number) => {
     setSessionError('');
@@ -66,40 +169,44 @@ export default function Settings() {
       return;
     }
 
-    setPasswordLoading(true);
-    const res = await changePassword(currentPassword, newPassword);
-    setPasswordLoading(false);
+    await withSudo(async () => {
+      setPasswordLoading(true);
+      const res = await changePassword(currentPassword, newPassword);
+      setPasswordLoading(false);
 
-    if (res.success) {
-      setPasswordSuccess(true);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setTimeout(() => {
-        setShowPasswordModal(false);
-        setPasswordSuccess(false);
-      }, 2000);
-    } else {
-      setPasswordError(res.error?.message || 'Failed to change password');
-    }
+      if (res.success) {
+        setPasswordSuccess(true);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordSuccess(false);
+        }, 2000);
+      } else {
+        setPasswordError(res.error?.message || 'Failed to change password');
+      }
+    });
   };
 
   const handleDeleteAccount = async () => {
-    setDeleteError('');
-    setDeleteLoading(true);
+    await withSudo(async () => {
+      setDeleteError('');
+      setDeleteLoading(true);
 
-    const res = await deleteAccount(
-      isOAuthUser ? undefined : deletePassword,
-      isOAuthUser ? true : undefined
-    );
+      const res = await deleteAccount(
+        isOAuthUser ? undefined : deletePassword,
+        isOAuthUser ? true : undefined
+      );
 
-    setDeleteLoading(false);
+      setDeleteLoading(false);
 
-    if (res.success) {
-      logout();
-    } else {
-      setDeleteError(res.error?.message || 'Failed to delete account');
-    }
+      if (res.success) {
+        logout();
+      } else {
+        setDeleteError(res.error?.message || 'Failed to delete account');
+      }
+    });
   };
 
   return (
@@ -162,9 +269,195 @@ export default function Settings() {
           <h2 className="text-lg font-semibold text-n2f-text">Security</h2>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Two-Factor Authentication */}
+          <div>
+            <label className="label flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-n2f-text-muted" />
+              Two-Factor Authentication (2FA)
+            </label>
+            <p className="text-sm text-n2f-text-secondary mb-3">
+              Add an extra layer of security using an authenticator app like Google Authenticator or Authy
+            </p>
+
+            {totpSuccess && (
+              <div className="bg-emerald-900/30 border border-emerald-700 text-emerald-400 px-3 py-2 rounded-lg text-sm mb-3 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                {totpSuccess}
+              </div>
+            )}
+
+            {totpError && (
+              <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm mb-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {totpError}
+              </div>
+            )}
+
+            {totpEnabled ? (
+              // TOTP is enabled - show disable option
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400">
+                    <Check className="h-3 w-3 mr-1" />
+                    Enabled
+                  </span>
+                </div>
+
+                {!showDisableConfirm ? (
+                  <button
+                    onClick={() => setShowDisableConfirm(true)}
+                    className="btn-secondary text-red-400 border-red-700 hover:bg-red-900/30"
+                  >
+                    Disable 2FA
+                  </button>
+                ) : (
+                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    <p className="text-sm text-red-300 mb-3">
+                      Are you sure you want to disable two-factor authentication? This will make your account less secure.
+                    </p>
+
+                    {!isOAuthUser && (
+                      <div className="mb-3">
+                        <label className="label text-red-300">Enter your password to confirm</label>
+                        <input
+                          type="password"
+                          className="input"
+                          placeholder="Your password"
+                          value={disablePassword}
+                          onChange={(e) => setDisablePassword(e.target.value)}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowDisableConfirm(false);
+                          setDisablePassword('');
+                          setTotpError('');
+                        }}
+                        className="btn-secondary"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDisableTOTP}
+                        disabled={totpLoading || (!isOAuthUser && !disablePassword)}
+                        className="btn-danger"
+                      >
+                        {totpLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Disabling...
+                          </>
+                        ) : (
+                          'Disable 2FA'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : totpSetupData ? (
+              // TOTP setup in progress - show QR code and verification
+              <div className="bg-n2f-elevated border border-n2f-border rounded-lg p-4">
+                <div className="text-center mb-4">
+                  <div className="bg-white p-4 rounded-lg inline-block mb-3">
+                    <img
+                      src={totpSetupData.qr_code_url}
+                      alt="TOTP QR Code"
+                      className="w-48 h-48"
+                    />
+                  </div>
+                  <p className="text-sm text-n2f-text-secondary">
+                    Scan this QR code with your authenticator app
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="label">Or enter this code manually:</label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-black px-3 py-2 rounded font-mono text-sm text-n2f-text break-all">
+                      {totpSetupData.secret}
+                    </code>
+                    <button
+                      onClick={handleCopySecret}
+                      className="btn-secondary p-2"
+                      title="Copy secret"
+                    >
+                      {secretCopied ? (
+                        <Check className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleEnableTOTP}>
+                  <label className="label">Enter the 6-digit code from your app:</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      pattern="\d{6}"
+                      className="input flex-1 text-center font-mono text-lg tracking-widest"
+                      placeholder="000000"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    />
+                    <button
+                      type="submit"
+                      disabled={totpLoading || totpCode.length !== 6}
+                      className="btn-primary"
+                    >
+                      {totpLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Verify'
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                <button
+                  onClick={() => {
+                    setTotpSetupData(null);
+                    setTotpCode('');
+                    setTotpError('');
+                  }}
+                  className="text-sm text-n2f-text-muted hover:text-n2f-text mt-3"
+                >
+                  Cancel setup
+                </button>
+              </div>
+            ) : (
+              // TOTP not enabled - show setup button
+              <button
+                onClick={handleSetupTOTP}
+                disabled={totpLoading}
+                className="btn-primary"
+              >
+                {totpLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Enable Two-Factor Authentication
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Password */}
           {!isOAuthUser && (
-            <div>
+            <div className="pt-4 border-t border-n2f-border">
               <label className="label">Password</label>
               <p className="text-sm text-n2f-text-secondary mb-2">
                 Change your password to keep your account secure
@@ -179,7 +472,7 @@ export default function Settings() {
           )}
 
           {isOAuthUser && (
-            <div>
+            <div className="pt-4 border-t border-n2f-border">
               <label className="label">Password</label>
               <p className="text-sm text-n2f-text-secondary">
                 You signed in with {user?.oauth_provider}. Password management is handled by your OAuth provider.
@@ -187,6 +480,7 @@ export default function Settings() {
             </div>
           )}
 
+          {/* Session Duration */}
           <div className="pt-4 border-t border-n2f-border">
             <label className="label flex items-center gap-2">
               <Clock className="h-4 w-4 text-n2f-text-muted" />
@@ -227,6 +521,7 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* Sign Out */}
           <div className="pt-4 border-t border-n2f-border">
             <label className="label">Active Sessions</label>
             <p className="text-sm text-n2f-text-secondary mb-2">

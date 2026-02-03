@@ -14,6 +14,12 @@ import {
   authenticateMcpRequest,
   verifyAuthToken,
   verifyAdminToken,
+  verifySudoTOTP,
+  hasSudoSession,
+  setupTOTP,
+  verifyTOTPSetup,
+  disableTOTP,
+  getTOTPStatus,
 } from './auth';
 import {
   getOAuthAuthorizeUrl,
@@ -431,6 +437,174 @@ async function handleManagementApi(
         price_monthly: p.price_monthly,
         features: JSON.parse(p.features || '{}'),
       }))},
+    });
+  }
+
+  // ============================================
+  // Sudo Mode Endpoints (TOTP-based, requires JWT auth)
+  // ============================================
+
+  // Verify sudo using TOTP - validates code and creates sudo session
+  if (path === '/api/auth/verify-sudo' && method === 'POST') {
+    const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+    if (!authUser) {
+      return apiResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+    }
+
+    // Check if already has sudo session
+    const existingSudo = await hasSudoSession(env.RATE_LIMIT_KV, authUser.userId);
+    if (existingSudo.active) {
+      return apiResponse({
+        success: true,
+        data: { message: 'Already verified', expires_at: existingSudo.expires_at },
+      });
+    }
+
+    const body = await request.json() as { code?: string };
+    if (!body.code || !/^\d{6}$/.test(body.code)) {
+      return apiResponse({ success: false, error: { code: 'INVALID_CODE', message: 'Please enter a 6-digit code from your authenticator app' } }, 400);
+    }
+
+    const result = await verifySudoTOTP(env.DB, env.RATE_LIMIT_KV, env.ENCRYPTION_KEY, authUser.userId, body.code);
+    if (!result.success) {
+      return apiResponse({ success: false, error: { code: 'VERIFICATION_FAILED', message: result.error || 'Invalid verification code' } }, 400);
+    }
+
+    // Get the new session info
+    const sudoStatus = await hasSudoSession(env.RATE_LIMIT_KV, authUser.userId);
+
+    return apiResponse({
+      success: true,
+      data: { message: 'Verification successful', expires_at: sudoStatus.expires_at },
+    });
+  }
+
+  // Check sudo status - returns if sudo mode is active and TOTP status
+  if (path === '/api/auth/sudo-status' && method === 'GET') {
+    const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+    if (!authUser) {
+      return apiResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+    }
+
+    const [sudoStatus, totpStatus] = await Promise.all([
+      hasSudoSession(env.RATE_LIMIT_KV, authUser.userId),
+      getTOTPStatus(env.DB, authUser.userId),
+    ]);
+
+    return apiResponse({
+      success: true,
+      data: {
+        ...sudoStatus,
+        totp_enabled: totpStatus.enabled,
+      },
+    });
+  }
+
+  // ============================================
+  // TOTP Setup Endpoints (requires JWT auth)
+  // ============================================
+
+  // Start TOTP setup - generates secret and QR code
+  if (path === '/api/auth/totp/setup' && method === 'POST') {
+    const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+    if (!authUser) {
+      return apiResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+    }
+
+    // Check if TOTP is already enabled
+    const totpStatus = await getTOTPStatus(env.DB, authUser.userId);
+    if (totpStatus.enabled) {
+      return apiResponse({ success: false, error: { code: 'ALREADY_ENABLED', message: 'TOTP is already enabled. Disable it first to set up again.' } }, 400);
+    }
+
+    const result = await setupTOTP(env.RATE_LIMIT_KV, env.ENCRYPTION_KEY, authUser.userId, authUser.email);
+
+    return apiResponse({
+      success: true,
+      data: {
+        secret: result.secret,
+        uri: result.uri,
+        qr_code_url: result.qrCodeUrl,
+        message: 'Scan the QR code with your authenticator app, then verify with a code',
+      },
+    });
+  }
+
+  // Verify TOTP setup and enable
+  if (path === '/api/auth/totp/enable' && method === 'POST') {
+    const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+    if (!authUser) {
+      return apiResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+    }
+
+    const body = await request.json() as { code?: string };
+    if (!body.code || !/^\d{6}$/.test(body.code)) {
+      return apiResponse({ success: false, error: { code: 'INVALID_CODE', message: 'Please enter a 6-digit code from your authenticator app' } }, 400);
+    }
+
+    const result = await verifyTOTPSetup(env.DB, env.RATE_LIMIT_KV, env.ENCRYPTION_KEY, authUser.userId, body.code);
+    if (!result.success) {
+      return apiResponse({ success: false, error: { code: 'VERIFICATION_FAILED', message: result.error || 'Invalid code' } }, 400);
+    }
+
+    return apiResponse({
+      success: true,
+      data: { message: 'TOTP enabled successfully. You can now use your authenticator app for security verification.' },
+    });
+  }
+
+  // Get TOTP status
+  if (path === '/api/auth/totp/status' && method === 'GET') {
+    const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+    if (!authUser) {
+      return apiResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+    }
+
+    const totpStatus = await getTOTPStatus(env.DB, authUser.userId);
+
+    return apiResponse({
+      success: true,
+      data: { enabled: totpStatus.enabled },
+    });
+  }
+
+  // Disable TOTP (requires password for security)
+  if (path === '/api/auth/totp/disable' && method === 'POST') {
+    const authUser = await verifyAuthToken(request, env.JWT_SECRET);
+    if (!authUser) {
+      return apiResponse({ success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
+    }
+
+    const body = await request.json() as { password?: string };
+
+    // Get user to verify password (only for non-OAuth users)
+    const user = await getUserById(env.DB, authUser.userId);
+    if (!user) {
+      return apiResponse({ success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } }, 404);
+    }
+
+    // OAuth users don't have password, so require sudo session instead
+    if (user.password_hash) {
+      if (!body.password) {
+        return apiResponse({ success: false, error: { code: 'PASSWORD_REQUIRED', message: 'Password is required to disable TOTP' } }, 400);
+      }
+      const validPassword = await verifyPassword(body.password, user.password_hash);
+      if (!validPassword) {
+        return apiResponse({ success: false, error: { code: 'INVALID_PASSWORD', message: 'Invalid password' } }, 401);
+      }
+    } else {
+      // OAuth user - require active sudo session
+      const sudoStatus = await hasSudoSession(env.RATE_LIMIT_KV, authUser.userId);
+      if (!sudoStatus.active) {
+        return apiResponse({ success: false, error: { code: 'SUDO_REQUIRED', message: 'Security verification required' } }, 403);
+      }
+    }
+
+    await disableTOTP(env.DB, authUser.userId);
+
+    return apiResponse({
+      success: true,
+      data: { message: 'TOTP disabled successfully' },
     });
   }
 

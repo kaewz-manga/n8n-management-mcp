@@ -344,3 +344,161 @@ function base64UrlDecode(str: string): string {
   }
   return atob(str);
 }
+
+// ============================================
+// TOTP (Time-based One-Time Password)
+// RFC 6238 compliant for Google Authenticator
+// ============================================
+
+const TOTP_PERIOD = 30; // 30 seconds
+const TOTP_DIGITS = 6;
+const TOTP_SECRET_LENGTH = 20; // 20 bytes = 160 bits
+
+// Base32 alphabet (RFC 4648)
+const BASE32_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+/**
+ * Generate a random TOTP secret (20 bytes, base32 encoded)
+ */
+export function generateTOTPSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(TOTP_SECRET_LENGTH));
+  return base32Encode(bytes);
+}
+
+/**
+ * Generate otpauth:// URI for QR code
+ */
+export function generateTOTPUri(
+  secret: string,
+  email: string,
+  issuer: string = 'n8n Management MCP'
+): string {
+  const encodedIssuer = encodeURIComponent(issuer);
+  const encodedEmail = encodeURIComponent(email);
+  return `otpauth://totp/${encodedIssuer}:${encodedEmail}?secret=${secret}&issuer=${encodedIssuer}&algorithm=SHA1&digits=${TOTP_DIGITS}&period=${TOTP_PERIOD}`;
+}
+
+/**
+ * Verify a TOTP code
+ * Allows 1 time step before and after for clock drift
+ */
+export async function verifyTOTP(secret: string, code: string, window: number = 1): Promise<boolean> {
+  if (!/^\d{6}$/.test(code)) {
+    return false;
+  }
+
+  const counter = Math.floor(Date.now() / 1000 / TOTP_PERIOD);
+
+  // Check within window (current, past, future)
+  for (let i = -window; i <= window; i++) {
+    const expectedCode = await generateTOTPCode(secret, counter + i);
+    if (constantTimeEqual(code, expectedCode)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Generate a TOTP code for a given counter value
+ */
+async function generateTOTPCode(secret: string, counter: number): Promise<string> {
+  // Decode base32 secret to bytes
+  const secretBytes = base32Decode(secret);
+
+  // Convert counter to 8-byte big-endian
+  const counterBytes = new Uint8Array(8);
+  let temp = counter;
+  for (let i = 7; i >= 0; i--) {
+    counterBytes[i] = temp & 0xff;
+    temp = Math.floor(temp / 256);
+  }
+
+  // HMAC-SHA1
+  const key = await crypto.subtle.importKey(
+    'raw',
+    secretBytes,
+    { name: 'HMAC', hash: 'SHA-1' },
+    false,
+    ['sign']
+  );
+
+  const hmac = await crypto.subtle.sign('HMAC', key, counterBytes);
+  const hmacBytes = new Uint8Array(hmac);
+
+  // Dynamic truncation (RFC 4226)
+  const offset = hmacBytes[19] & 0x0f;
+  const binary =
+    ((hmacBytes[offset] & 0x7f) << 24) |
+    ((hmacBytes[offset + 1] & 0xff) << 16) |
+    ((hmacBytes[offset + 2] & 0xff) << 8) |
+    (hmacBytes[offset + 3] & 0xff);
+
+  const otp = binary % Math.pow(10, TOTP_DIGITS);
+  return otp.toString().padStart(TOTP_DIGITS, '0');
+}
+
+/**
+ * Base32 encode bytes to string
+ */
+function base32Encode(bytes: Uint8Array): string {
+  let result = '';
+  let bits = 0;
+  let value = 0;
+
+  for (let i = 0; i < bytes.length; i++) {
+    value = (value << 8) | bytes[i];
+    bits += 8;
+
+    while (bits >= 5) {
+      bits -= 5;
+      result += BASE32_CHARS[(value >> bits) & 0x1f];
+    }
+  }
+
+  if (bits > 0) {
+    result += BASE32_CHARS[(value << (5 - bits)) & 0x1f];
+  }
+
+  return result;
+}
+
+/**
+ * Base32 decode string to bytes
+ */
+function base32Decode(str: string): Uint8Array {
+  str = str.toUpperCase().replace(/[^A-Z2-7]/g, '');
+
+  const bytes: number[] = [];
+  let bits = 0;
+  let value = 0;
+
+  for (let i = 0; i < str.length; i++) {
+    const charIndex = BASE32_CHARS.indexOf(str[i]);
+    if (charIndex === -1) continue;
+
+    value = (value << 5) | charIndex;
+    bits += 5;
+
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((value >> bits) & 0xff);
+    }
+  }
+
+  return new Uint8Array(bytes);
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}

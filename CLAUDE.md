@@ -76,10 +76,10 @@ There is also a **Dashboard** (React 19 SPA) in `dashboard/` deployed on Cloudfl
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `src/index.ts` | ~1500 | Main entry — all API routes + MCP handler |
-| `src/auth.ts` | ~530 | Register, login, API key validation, admin auth |
-| `src/db.ts` | ~410 | All D1 CRUD operations (users, connections, AI, bots, usage) |
-| `src/crypto-utils.ts` | ~345 | PBKDF2, AES-256-GCM, JWT, API key generation |
+| `src/index.ts` | ~1600 | Main entry — all API routes + MCP handler |
+| `src/auth.ts` | ~800 | Register, login, API key validation, TOTP, sudo mode |
+| `src/db.ts` | ~450 | All D1 CRUD operations (users, connections, AI, bots, usage, TOTP) |
+| `src/crypto-utils.ts` | ~450 | PBKDF2, AES-256-GCM, JWT, API key generation, TOTP (RFC 6238) |
 | `src/oauth.ts` | ~330 | GitHub + Google OAuth 2.0 flows |
 | `src/stripe.ts` | ~295 | Stripe checkout, billing portal, webhook handler |
 | `src/tools.ts` | ~375 | 31 MCP tool definitions |
@@ -95,15 +95,18 @@ There is also a **Dashboard** (React 19 SPA) in `dashboard/` deployed on Cloudfl
 |------|---------|
 | `src/components/Layout.tsx` | Main layout with sidebar (user pages) |
 | `src/components/AdminLayout.tsx` | Admin panel layout |
+| `src/components/SudoModal.tsx` | TOTP verification modal |
 | `src/pages/Login.tsx` | Email + OAuth login |
 | `src/pages/Dashboard.tsx` | Overview + stats |
 | `src/pages/Connections.tsx` | n8n connections + API keys |
 | `src/pages/Usage.tsx` | Usage statistics + plan comparison |
-| `src/pages/Settings.tsx` | Profile, password, danger zone |
+| `src/pages/Settings.tsx` | Profile, password, 2FA setup, danger zone |
 | `src/pages/admin/*.tsx` | Admin: overview, users, analytics, revenue, health |
 | `src/pages/n8n/*.tsx` | n8n UI: workflows, executions, credentials, tags, users |
 | `src/lib/api.ts` | API client (all CF Worker endpoints) |
 | `src/contexts/AuthContext.tsx` | Auth state management |
+| `src/contexts/SudoContext.tsx` | Sudo mode + TOTP context |
+| `src/hooks/useSudo.ts` | Sudo state hook |
 | `src/index.css` | Tailwind + custom n2f-* color variables |
 
 ### Dashboard Theme
@@ -150,15 +153,70 @@ Key relationships:
 ## Security
 
 - Password: PBKDF2 with 100,000 iterations
-- Credentials: AES-256-GCM (n8n API keys, AI API keys, bot tokens)
+- Credentials: AES-256-GCM (n8n API keys, AI API keys, bot tokens, TOTP secrets)
 - JWT: HS256 signing, 24-hour expiry
 - API keys: SHA-256 hashed (plain text never stored)
 - OAuth state: KV-stored CSRF tokens (10 min TTL)
 - Stripe webhooks: HMAC-SHA256 signature verification
+- **TOTP (2FA)**: RFC 6238 compliant, HMAC-SHA1, 30-second window
 
 **Critical secrets (never change after first use)**:
-- `ENCRYPTION_KEY` — Changing breaks all encrypted credentials
+- `ENCRYPTION_KEY` — Changing breaks all encrypted credentials (including TOTP secrets)
 - `JWT_SECRET` — Changing invalidates all active sessions
+
+---
+
+## Sudo Mode (2FA / TOTP)
+
+Sensitive actions require **Two-Factor Authentication** verification via TOTP (Google Authenticator, Authy, etc.).
+
+### Protected Actions
+
+| Page | Action | Requires Sudo |
+|------|--------|---------------|
+| **Connections** | Delete connection | ✅ |
+| **Connections** | Generate new API key | ✅ |
+| **Connections** | Revoke API key | ✅ |
+| **Settings** | Change password | ✅ |
+| **Settings** | Delete account | ✅ |
+| **Admin Users** | Delete user | ✅ |
+
+### How It Works
+
+1. User enables TOTP in Settings → Security → Two-Factor Authentication
+2. Scan QR code with authenticator app
+3. Verify with 6-digit code to enable
+4. When performing sensitive action:
+   - If no active sudo session → modal asks for TOTP code
+   - If valid → sudo session created (15 minutes)
+   - Subsequent actions within 15 minutes don't require re-verification
+
+### TOTP API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/auth/totp/setup` | POST | Generate secret + QR code URL |
+| `/api/auth/totp/enable` | POST | Verify code and enable TOTP |
+| `/api/auth/totp/status` | GET | Check if TOTP is enabled |
+| `/api/auth/totp/disable` | POST | Disable TOTP (requires password) |
+| `/api/auth/verify-sudo` | POST | Verify TOTP code, create sudo session |
+| `/api/auth/sudo-status` | GET | Check sudo session + TOTP status |
+
+### Database Columns (users table)
+
+```sql
+totp_secret_encrypted TEXT    -- AES-256-GCM encrypted TOTP secret
+totp_enabled INTEGER DEFAULT 0  -- 0 = disabled, 1 = enabled
+```
+
+### Dashboard Files
+
+| File | Purpose |
+|------|---------|
+| `src/hooks/useSudo.ts` | Sudo state management, TOTP verification |
+| `src/contexts/SudoContext.tsx` | Sudo context provider, `withSudo` wrapper |
+| `src/components/SudoModal.tsx` | TOTP code input modal |
+| `src/pages/Settings.tsx` | TOTP setup UI with QR code |
 
 ---
 
@@ -245,16 +303,51 @@ Shared secrets: `AGENT_SECRET` must match on both Vercel and CF Worker.
 
 ## Things to NOT Do
 
-- Don't change `ENCRYPTION_KEY` — Breaks all encrypted credentials in D1
+- Don't change `ENCRYPTION_KEY` — Breaks all encrypted credentials in D1 (including TOTP secrets)
 - Don't change `JWT_SECRET` — Invalidates all active user sessions
-- Don't modify auth flows without understanding all 4 auth types
+- Don't modify auth flows without understanding all 4 auth types + TOTP
 - Don't add CORS restrictions — Agent and Dashboard call from different origins
 - Don't remove `stripe_customer_id` from users table — Needed for billing
 - Don't add "Starter" plan — Removed, only Free/Pro/Enterprise exist
+- Don't bypass sudo checks — Protected actions must require TOTP verification
+- Don't store TOTP secrets unencrypted — Always use AES-256-GCM via `encrypt()`
 
 ---
 
-## Handoff / Recent Changes (2026-02-03)
+## Handoff / Recent Changes (2026-02-04)
+
+### TOTP (Two-Factor Authentication) Added
+- Replaced email OTP with **TOTP** (RFC 6238) for sudo mode
+- Users set up 2FA via QR code in Settings → Security
+- Supported apps: Google Authenticator, Authy, 1Password, etc.
+- TOTP secret stored encrypted (AES-256-GCM) in `users.totp_secret_encrypted`
+- Sudo session lasts **15 minutes** after verification
+- Migration: `migrations/005_totp.sql`
+
+### Protected Actions (require 2FA)
+- Delete connection, Generate/Revoke API key (Connections page)
+- Change password, Delete account (Settings page)
+- Delete user (Admin Users page)
+
+### New Dashboard Components
+- `SudoModal.tsx` — TOTP code input (6-digit, auto-submit)
+- `useSudo.ts` — Hook for sudo state + TOTP verification
+- `SudoContext.tsx` — `withSudo()` wrapper for protected actions
+- Settings page — TOTP setup UI with QR code display
+
+### API Changes
+- Removed: `/api/auth/request-sudo` (email OTP)
+- Added: `/api/auth/totp/setup`, `/api/auth/totp/enable`, `/api/auth/totp/status`, `/api/auth/totp/disable`
+- Updated: `/api/auth/verify-sudo` now accepts TOTP code
+- Updated: `/api/auth/sudo-status` returns `totp_enabled` boolean
+
+### Removed
+- Email OTP system (MailChannels) — service discontinued Aug 2024
+- `src/email.ts` — no longer used (can be deleted)
+
+---
+
+## Previous Changes (2026-02-03)
 
 ### Plan System Simplified
 - Removed "Starter" plan — now only **Free**, **Pro**, **Enterprise**
@@ -289,4 +382,4 @@ Shared secrets: `AGENT_SECRET` must match on both Vercel and CF Worker.
 
 ---
 
-**Version**: 1.1 | Updated: 2026-02-03
+**Version**: 1.2 | Updated: 2026-02-04
