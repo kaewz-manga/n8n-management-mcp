@@ -424,6 +424,8 @@ async function handleManagementApi(
       data: { plans: plans.map(p => ({
         id: p.id,
         name: p.name,
+        daily_request_limit: p.daily_request_limit ?? -1,
+        requests_per_minute: p.requests_per_minute ?? 50,
         monthly_request_limit: p.monthly_request_limit,
         max_connections: p.max_connections,
         price_monthly: p.price_monthly,
