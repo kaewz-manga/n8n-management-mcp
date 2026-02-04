@@ -2,7 +2,7 @@
 
 > Context สำหรับ Claude ตัวใหม่ที่จะทำงานต่อ
 
-**Updated**: 2026-02-04
+**Updated**: 2026-02-05
 **GitHub**: https://github.com/kaewz-manga/n8n-management-mcp
 
 ### Production URLs
@@ -36,9 +36,39 @@ It connects to this Worker via:
 
 ---
 
-## สถานะปัจจุบัน (2026-02-04)
+## สถานะปัจจุบัน (2026-02-05)
 
-### ✅ ล่าสุด (2026-02-04)
+### ✅ ล่าสุด (2026-02-05)
+
+**Dashboard Public Pages (~2,400 lines added)**:
+- **Brand Name Fix** - เปลี่ยน "n8n MCP" เป็น "n8n Management MCP" ทุกที่ใน Landing page
+- **Footer Redesign** - 3 คอลัมน์ (Product, Resources, Company) พร้อมลิงก์ไปหน้าใหม่ทั้งหมด
+- **OAuth Delete Account Bug Fix** - แก้ปัญหา `oauth_provider` เป็น NULL ในฐานข้อมูล
+  - `src/db.ts` - แก้ `createUser()` ให้เก็บ oauth_provider, oauth_id
+  - `src/oauth.ts` - แก้ให้ส่ง provider info ไป createUser และ update existing users
+- **Privacy Policy** - เขียนใหม่ทั้งหมด (~350 lines) - 14 sections, GDPR/PDPA compliant
+- **Terms of Service** - เขียนใหม่ทั้งหมด (~350 lines) - 17 sections, Governing law: Thailand
+- **FAQ Page** - สร้างใหม่ (~500 lines) - 5 categories, search, accordion UI, code examples
+- **Documentation Page** - สร้างใหม่ (~720 lines) - 5 tabs, 31 MCP tools documented, API reference
+- **Status Page** - สร้างใหม่ (~450 lines) - Real-time health check, 90-day uptime bar, auto-refresh
+
+**New Routes**:
+- `/faq` - FAQ page
+- `/docs` - Documentation page
+- `/status` - Status page (real-time health monitoring)
+
+**Commits (2026-02-05)**:
+1. `fix: change brand name from "n8n MCP" to "n8n Management MCP"`
+2. `feat: redesign footer with 3-column layout`
+3. `fix: store oauth_provider and oauth_id for OAuth users`
+4. `feat: comprehensive Privacy Policy and Terms of Service pages`
+5. `feat: add FAQ page with search and accordion UI`
+6. `feat: add Documentation page with MCP tools and API reference`
+7. `feat: add Status page with real-time health monitoring`
+
+---
+
+### ✅ ก่อนหน้า (2026-02-04)
 
 - **API Key Prefix เปลี่ยน** - `saas_` → `n2f_` (Breaking change! key เก่าใช้ไม่ได้)
 - **Terms of Service** - หน้า `/terms` พร้อม legal content
@@ -204,7 +234,10 @@ n8n-management-mcp/
 │   │   │   ├── Dashboard.tsx # Overview + stats + connections
 │   │   │   ├── Connections.tsx # Manage n8n connections + API keys
 │   │   │   ├── Usage.tsx     # Usage statistics
-│   │   │   └── Settings.tsx  # Profile, password, MCP config, danger zone
+│   │   │   ├── Settings.tsx  # Profile, password, MCP config, danger zone
+│   │   │   ├── FAQ.tsx       # FAQ with search + accordion (NEW 2026-02-05)
+│   │   │   ├── Documentation.tsx # Docs + MCP tools (NEW 2026-02-05)
+│   │   │   └── Status.tsx    # Real-time health monitor (NEW 2026-02-05)
 │   │   ├── components/Layout.tsx  # Sidebar navigation
 │   │   ├── contexts/AuthContext.tsx # Auth state management
 │   │   └── lib/api.ts       # API client (auth, connections, usage, billing, OAuth)
@@ -437,6 +470,7 @@ Claude Desktop config:
 7. **Dashboard sent custom redirect_uri** - Overrode Worker's callback URL → Removed from api.ts (02fd3fa)
 8. **package-lock.json out of sync** - vitest@2.1.9 missing from lock file → Cloudflare Pages `npm ci` failed → Fixed: ran `npm install` to sync (275b97d)
 9. **TypeScript errors after npm fix** - Missing `is_admin` in JWTPayload, missing `oauth_provider` in User, `listCredentials` call removed → Fixed types and code (6f465a2)
+10. **OAuth delete account not working** - `oauth_provider` was NULL in database for all OAuth users → UI showed password field instead of "delete" confirmation → Fixed: modified `createUser()` in db.ts and OAuth handlers in oauth.ts to store provider info (2026-02-05)
 
 ---
 
@@ -451,18 +485,23 @@ Claude Desktop config:
 ## Git History (Key Commits)
 
 ```
+# 2026-02-05 (Dashboard Public Pages)
+aea14ae feat: add Status page with real-time health monitoring
+6699a69 feat: add Documentation page with tabbed interface
+d3553b8 feat: add FAQ page with searchable accordion UI
+cd35886 docs: comprehensive Privacy Policy and Terms of Service
+50381fe fix: store oauth_provider when creating/updating OAuth users
+aee7d1f feat: redesign footer with 3-column layout
+be3e034 chore: rename brand from "n8n MCP" to "n8n Management MCP"
+
+# 2026-02-04 and earlier
+d3dcb23 fix: simplify delete account flow for OAuth users
 25a0e36 feat: require terms acceptance before registration
 84a8529 feat: add terms/privacy pages, signup checkbox, change API key prefix to n2f_
 6b3dd2a feat: add TOTP two-factor authentication for sudo mode
 275b97d fix: sync package-lock.json with package.json
 1c3007b Apply dark theme across entire dashboard
-ea52536 Blur only paid plan cards, keep free plan visible
 761a824 Remove agent/ folder, moved to separate repository
-458b575 Hide pricing plans from public, keep visible for admin only
-24f7887 Fix n8n Users page: show role as badge, add pending status
-5862384 Add user-configurable session duration and rename worker
-574c987 Add CLAUDE.md and update HANDOFF.md with current project status
-7cb3aa2 Add custom domains for Worker and Dashboard
 02fd3fa Fix OAuth redirect_uri to use Worker origin instead of APP_URL
 ```
 
@@ -470,8 +509,11 @@ ea52536 Blur only paid plan cards, keep free plan visible
 
 ## Next Steps
 
-### Priority 1: MCP Features
-- เน้นทำ MCP ให้สมบูรณ์ก่อน (ผู้ใช้ต้องการ)
+### Priority 1: Dashboard Enhancements
+- **Data Export** - ให้ผู้ใช้ export ข้อมูลของตัวเองเป็น JSON/CSV
+- **Auto-delete Logs** - ลบ usage logs เก่าอัตโนมัติ (90 วัน)
+- **Account Recovery** - เพิ่ม grace period 30 วันก่อนลบบัญชีถาวร
+- **Email Notifications** - แจ้งเตือนเมื่อใกล้ถึง usage limit
 
 ### Priority 2: Dashboard Testing
 - ทดสอบ n8n-mcp-agent Dashboard CRUD ให้ครบ (login เข้าได้แล้ว)
@@ -493,12 +535,22 @@ ea52536 Blur only paid plan cards, keep free plan visible
 |----------|------|-------------|
 | 1 | `src/index.ts` | Main entry point - all API routes + MCP handler |
 | 2 | `src/auth.ts` | Auth flow - register, login, API key validation |
-| 3 | `src/stripe.ts` | Stripe billing - checkout, portal, webhooks |
+| 3 | `src/oauth.ts` | GitHub + Google OAuth flow (~330 lines) |
 | 4 | `src/db.ts` | Database layer - all CRUD operations |
-| 5 | `schema.sql` | D1 database schema |
-| 6 | `docs/DEPLOYMENT.md` | Full deployment guide (11 steps) |
-| 7 | `docs/SAAS_PLAN.md` | Business plan + architecture |
+| 5 | `src/stripe.ts` | Stripe billing - checkout, portal, webhooks |
+| 6 | `schema.sql` | D1 database schema |
+| 7 | `docs/DEPLOYMENT.md` | Full deployment guide (11 steps) |
 | 8 | `dashboard/src/lib/api.ts` | Frontend API client |
+
+### New Public Pages (2026-02-05)
+
+| File | Description |
+|------|-------------|
+| `dashboard/src/pages/FAQ.tsx` | FAQ with search + accordion (~500 lines) |
+| `dashboard/src/pages/Documentation.tsx` | Docs + 31 MCP tools reference (~720 lines) |
+| `dashboard/src/pages/Status.tsx` | Real-time health monitoring (~450 lines) |
+| `dashboard/src/pages/Privacy.tsx` | Privacy Policy - GDPR/PDPA (~350 lines) |
+| `dashboard/src/pages/Terms.tsx` | Terms of Service (~350 lines) |
 
 ---
 
