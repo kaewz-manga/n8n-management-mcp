@@ -43,7 +43,7 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "env": {
-        "MEMORY_FILE_PATH": ".claude/memory.jsonl"
+        "MEMORY_FILE_PATH": "D:/Dev/playground/Claude_Code_Commander/n8n-management-mcp/.memory/infrastructure.jsonl"
       },
       "disabled": false
     },
