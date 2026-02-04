@@ -11,6 +11,7 @@ import {
   Check,
   ArrowRight,
   Github,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function Landing() {
@@ -233,30 +234,67 @@ Would you like me to activate the Data Sync Pipeline?`}</code>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-n2f-bg border-t border-n2f-border">
+      <footer className="py-16 bg-n2f-bg border-t border-n2f-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mb-12">
+            {/* Product */}
+            <div>
+              <h3 className="text-n2f-text font-semibold mb-4">Product</h3>
+              <ul className="space-y-3">
+                <li><a href="#features" className="text-n2f-text-muted hover:text-n2f-accent">Features</a></li>
+                <li><a href="#pricing" className="text-n2f-text-muted hover:text-n2f-accent">Pricing</a></li>
+                <li><a href="#demo" className="text-n2f-text-muted hover:text-n2f-accent">Demo</a></li>
+                <li><a href="#faq" className="text-n2f-text-muted hover:text-n2f-accent">FAQ</a></li>
+              </ul>
+            </div>
+
+            {/* Resources */}
+            <div>
+              <h3 className="text-n2f-text font-semibold mb-4">Resources</h3>
+              <ul className="space-y-3">
+                <li><a href="#" className="text-n2f-text-muted hover:text-n2f-accent">Documentation</a></li>
+                <li><a href="#" className="text-n2f-text-muted hover:text-n2f-accent">API Reference</a></li>
+                <li>
+                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-n2f-text-muted hover:text-n2f-accent inline-flex items-center gap-1">
+                    GitHub <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  <a href="https://docs.n8n.io" target="_blank" rel="noopener noreferrer" className="text-n2f-text-muted hover:text-n2f-accent inline-flex items-center gap-1">
+                    n8n Documentation <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h3 className="text-n2f-text font-semibold mb-4">Company</h3>
+              <ul className="space-y-3">
+                <li><a href="mailto:contact@node2flow.net" className="text-n2f-text-muted hover:text-n2f-accent">Contact</a></li>
+                <li>
+                  <Link to="/privacy" className="text-n2f-text-muted hover:text-n2f-accent inline-flex items-center gap-1">
+                    Privacy Policy <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/terms" className="text-n2f-text-muted hover:text-n2f-accent inline-flex items-center gap-1">
+                    Terms of Service <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="pt-8 border-t border-n2f-border flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="bg-n2f-accent p-2 rounded-lg">
                 <Zap className="h-4 w-4 text-gray-900" />
               </div>
               <span className="text-lg font-bold text-n2f-text">n8n Management MCP</span>
             </div>
-
-            <div className="flex items-center gap-6 text-n2f-text-muted">
-              <a href="#" className="hover:text-n2f-accent">Documentation</a>
-              <a href="#" className="hover:text-n2f-accent">API Reference</a>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-n2f-accent"
-              >
-                <Github className="h-5 w-5" />
-              </a>
-            </div>
-
-            <p className="text-n2f-text-secondary text-sm">
+            <p className="text-n2f-text-muted text-sm">
               &copy; {new Date().getFullYear()} n8n Management MCP. All rights reserved.
             </p>
           </div>
