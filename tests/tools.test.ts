@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { TOOLS } from '../src/tools';
 
 describe('MCP Tools', () => {
-  it('should have 32 tools defined', () => {
-    expect(TOOLS.length).toBe(32);
+  it('should have 27 tools defined', () => {
+    expect(TOOLS.length).toBe(27);
   });
 
   it('should have unique tool names', () => {
@@ -72,7 +72,6 @@ describe('MCP Tools', () => {
 
   describe('Credential Tools', () => {
     const credentialTools = [
-      'n8n_list_credentials',
       'n8n_create_credential',
       'n8n_update_credential',
       'n8n_delete_credential',
