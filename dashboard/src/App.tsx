@@ -25,6 +25,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import FAQ from './pages/FAQ';
 import Documentation from './pages/Documentation';
+import Status from './pages/Status';
 import { ConnectionProvider } from './contexts/ConnectionContext';
 import { SudoProvider } from './contexts/SudoContext';
 import { Loader2 } from 'lucide-react';
@@ -96,6 +97,7 @@ function AppRoutes() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/docs" element={<Documentation />} />
+      <Route path="/status" element={<Status />} />
 
       {/* Protected routes */}
       <Route
