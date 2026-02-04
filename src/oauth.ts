@@ -149,7 +149,7 @@ interface GitHubEmail {
   verified: boolean;
 }
 
-async function getGitHubUserInfo(accessToken: string): Promise<{ email: string; name: string | null } | null> {
+async function getGitHubUserInfo(accessToken: string): Promise<{ id: string; email: string; name: string | null } | null> {
   try {
     // Get user profile
     const userResponse = await fetch('https://api.github.com/user', {
@@ -189,6 +189,7 @@ async function getGitHubUserInfo(accessToken: string): Promise<{ email: string; 
     }
 
     return {
+      id: String(user.id),
       email,
       name: user.name || user.login,
     };
@@ -198,7 +199,7 @@ async function getGitHubUserInfo(accessToken: string): Promise<{ email: string; 
   }
 }
 
-async function getGoogleUserInfo(accessToken: string): Promise<{ email: string; name: string | null } | null> {
+async function getGoogleUserInfo(accessToken: string): Promise<{ id: string; email: string; name: string | null } | null> {
   try {
     const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
@@ -217,6 +218,7 @@ async function getGoogleUserInfo(accessToken: string): Promise<{ email: string; 
     }
 
     return {
+      id: user.id,
       email: user.email,
       name: user.name,
     };
@@ -272,7 +274,15 @@ export async function handleOAuthCallback(
     // Create new user (no password for OAuth users)
     // Generate a random "password hash" that can never be used for login
     const randomHash = `oauth_${provider}_${generateUUID()}`;
-    user = await createUser(env.DB, userInfo.email, randomHash);
+    user = await createUser(env.DB, userInfo.email, randomHash, provider, userInfo.id);
+  } else if (!user.oauth_provider) {
+    // Update existing user with OAuth info (for users who registered with email first)
+    await env.DB
+      .prepare('UPDATE users SET oauth_provider = ?, oauth_id = ?, updated_at = ? WHERE id = ?')
+      .bind(provider, userInfo.id, new Date().toISOString(), user.id)
+      .run();
+    user.oauth_provider = provider;
+    user.oauth_id = userInfo.id;
   }
 
   // Check if user is active

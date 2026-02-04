@@ -23,23 +23,27 @@ import { generateUUID } from './crypto-utils';
 export async function createUser(
   db: D1Database,
   email: string,
-  passwordHash: string
+  passwordHash: string,
+  oauthProvider?: string,
+  oauthId?: string
 ): Promise<User> {
   const id = generateUUID();
   const now = new Date().toISOString();
 
   await db
     .prepare(
-      `INSERT INTO users (id, email, password_hash, plan, status, created_at, updated_at)
-       VALUES (?, ?, ?, 'free', 'active', ?, ?)`
+      `INSERT INTO users (id, email, password_hash, oauth_provider, oauth_id, plan, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'free', 'active', ?, ?)`
     )
-    .bind(id, email.toLowerCase(), passwordHash, now, now)
+    .bind(id, email.toLowerCase(), passwordHash, oauthProvider || null, oauthId || null, now, now)
     .run();
 
   return {
     id,
     email: email.toLowerCase(),
     password_hash: passwordHash,
+    oauth_provider: oauthProvider,
+    oauth_id: oauthId,
     plan: 'free',
     status: 'active',
     stripe_customer_id: null,
