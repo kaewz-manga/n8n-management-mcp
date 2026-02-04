@@ -1,12 +1,14 @@
 ---
 name: deploy
-description: Deploy Worker and Dashboard to Cloudflare
-disable-model-invocation: true
+description: Deploy Worker and Dashboard to Cloudflare with full verification
+user-invocable: true
 ---
 
-# Deploy Checklist
+# Deploy to Production
 
-Use this skill with `/deploy` to deploy to production.
+Use `/deploy` to deploy Worker and Dashboard.
+
+---
 
 ## Pre-Deploy Checks
 
@@ -21,46 +23,65 @@ npm test
 git status
 ```
 
+If any check fails, fix issues before deploying.
+
+---
+
 ## Deploy Worker
 
 ```bash
-# Deploy to Cloudflare Workers
 npx wrangler deploy
-
-# Verify deployment
-curl https://n8n-management-mcp.node2flow.net/
 ```
+
+Verify deployment:
+```bash
+curl -s https://n8n-management-mcp.node2flow.net/
+curl -s https://n8n-management-mcp.node2flow.net/api/plans
+```
+
+---
 
 ## Deploy Dashboard
 
 ```bash
 cd dashboard
-
-# Build
 npm run build
-
-# Deploy to Cloudflare Pages
 npm run deploy
-
-# Verify deployment
-curl https://n8n-management-dashboard.node2flow.net/
 ```
+
+Verify deployment:
+```bash
+curl -I https://n8n-management-dashboard.node2flow.net/
+```
+
+---
 
 ## Post-Deploy Verification
 
+### Option 1: Manual Check
+
 ```bash
-# 1. Health check
+# Health check
 curl https://n8n-management-mcp.node2flow.net/
 
-# 2. Plans endpoint (public)
+# Plans endpoint
 curl https://n8n-management-mcp.node2flow.net/api/plans
 
-# 3. MCP tools/list (requires API key)
+# MCP tools/list (requires API key)
 curl -X POST https://n8n-management-mcp.node2flow.net/mcp \
   -H "Authorization: Bearer n2f_xxx" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
+
+### Option 2: Use cloudflare-observability MCP
+
+Use **cloudflare-observability** MCP server to:
+- View recent logs
+- Check for 500 errors
+- Verify response times
+
+---
 
 ## Rollback
 
@@ -74,12 +95,17 @@ npx wrangler deployments list
 npx wrangler rollback
 ```
 
+---
+
 ## Real-time Logs
 
 ```bash
-# Watch Worker logs
 npx wrangler tail
 ```
+
+Or use **cloudflare-observability** MCP for advanced log analysis.
+
+---
 
 ## Environment Variables
 
@@ -93,6 +119,24 @@ wrangler secret list
 wrangler secret put SECRET_NAME
 ```
 
+---
+
+## Record Deployment (Memory MCP)
+
+After successful deployment, record in Memory MCP:
+
+```
+Entity: deploy-YYYY-MM-DD
+Type: deployment
+Observations:
+  - Worker version deployed
+  - Dashboard version deployed
+  - Changes included
+  - Verification results
+```
+
+---
+
 ## Checklist
 
 - [ ] TypeScript passes
@@ -102,3 +146,4 @@ wrangler secret put SECRET_NAME
 - [ ] Dashboard deployed
 - [ ] Health check passes
 - [ ] API endpoints work
+- [ ] Logged in Memory MCP
