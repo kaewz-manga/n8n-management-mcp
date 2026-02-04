@@ -52,6 +52,7 @@ export default function Settings() {
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -190,15 +191,31 @@ export default function Settings() {
   };
 
   const handleDeleteAccount = async () => {
+    setDeleteError('');
+    setDeleteLoading(true);
+
+    // OAuth users: just need to type "delete" - no TOTP required
+    if (isOAuthUser) {
+      if (deleteConfirmText.toLowerCase() !== 'delete') {
+        setDeleteError('Please type "delete" to confirm');
+        setDeleteLoading(false);
+        return;
+      }
+
+      const res = await deleteAccount(undefined, true);
+      setDeleteLoading(false);
+
+      if (res.success) {
+        logout();
+      } else {
+        setDeleteError(res.error?.message || 'Failed to delete account');
+      }
+      return;
+    }
+
+    // Email/password users: require TOTP + password
     await withSudo(async () => {
-      setDeleteError('');
-      setDeleteLoading(true);
-
-      const res = await deleteAccount(
-        isOAuthUser ? undefined : deletePassword,
-        isOAuthUser ? true : undefined
-      );
-
+      const res = await deleteAccount(deletePassword, undefined);
       setDeleteLoading(false);
 
       if (res.success) {
@@ -598,7 +615,18 @@ export default function Settings() {
               </div>
             )}
 
-            {!isOAuthUser && (
+            {isOAuthUser ? (
+              <div className="mb-4">
+                <label className="label text-red-300">Type "delete" to confirm</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="delete"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                />
+              </div>
+            ) : (
               <div className="mb-4">
                 <label className="label text-red-300">Enter your password to confirm</label>
                 <input
@@ -616,6 +644,7 @@ export default function Settings() {
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setDeletePassword('');
+                  setDeleteConfirmText('');
                   setDeleteError('');
                 }}
                 className="btn-secondary"
@@ -624,7 +653,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={handleDeleteAccount}
-                disabled={deleteLoading || (!isOAuthUser && !deletePassword)}
+                disabled={deleteLoading || (isOAuthUser ? deleteConfirmText.toLowerCase() !== 'delete' : !deletePassword)}
                 className="btn-danger"
               >
                 {deleteLoading ? (
