@@ -17,6 +17,7 @@ export interface User {
   session_duration_seconds?: number;
   created_at: string;
   oauth_provider?: string | null;
+  scheduled_deletion_at?: string | null;
 }
 
 export interface Connection {
@@ -237,6 +238,28 @@ export async function updateSessionDuration(
   }
 
   return response;
+}
+
+export async function exportUserData(format: 'json' | 'csv'): Promise<Blob> {
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}/api/user/export?format=${format}`, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : '',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'Export failed' } }));
+    throw new Error(error.error?.message || 'Export failed');
+  }
+
+  return response.blob();
+}
+
+export async function recoverAccount(): Promise<ApiResponse<{ message: string }>> {
+  return request('/api/user/recover', {
+    method: 'POST',
+  });
 }
 
 // ============================================

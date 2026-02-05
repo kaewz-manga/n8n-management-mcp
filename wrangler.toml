@@ -43,3 +43,12 @@ id = "45d5d994b649440ab34e4f0a3a5eaa66"
 
 [vars]
 ENVIRONMENT = "production"
+
+# ============================================
+# Cron Triggers (Scheduled Tasks)
+# ============================================
+# Daily at midnight UTC:
+# - Delete usage logs older than 90 days
+# - Process scheduled account deletions (30-day grace period)
+[triggers]
+crons = ["0 0 * * *"]

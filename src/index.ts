@@ -73,11 +73,25 @@ import {
   updateBotConnectionWebhook,
   deleteBotConnection,
   updateSessionDuration,
+  // Data Export (GDPR)
+  getUserDataForExport,
+  getUsageLogsForExport,
+  // Auto-delete Logs
+  deleteOldUsageLogs,
+  // Account Recovery
+  scheduleUserDeletion,
+  cancelUserDeletion,
+  getUsersScheduledForDeletion,
+  hardDeleteUser,
+  // Connection Activity Tracking
+  updateConnectionLastUsed,
+  getInactiveFreePlanConnections,
 } from './db';
 import { hashPassword, verifyPassword, decrypt, encrypt, generateJWT } from './crypto-utils';
 import { generateApiKey, hashApiKey } from './crypto-utils';
 import { createApiKey as createApiKeyDb } from './db';
 import { createCheckoutSession, createBillingPortalSession, handleStripeWebhook } from './stripe';
+import { sendEmail, welcomeEmail, deletionScheduledEmail, accountRecoveredEmail, usageLimitWarningEmail, connectionDeletedEmail } from './email';
 
 // ============================================
 // CORS Headers
@@ -290,7 +304,8 @@ async function handleToolCall(
 async function handleManagementApi(
   request: Request,
   env: Env,
-  path: string
+  path: string,
+  ctx: ExecutionContext
 ): Promise<Response> {
   const method = request.method;
 
@@ -298,6 +313,12 @@ async function handleManagementApi(
   if (path === '/api/auth/register' && method === 'POST') {
     const body = await request.json() as { email: string; password: string };
     const result = await handleRegister(env.DB, body.email, body.password);
+
+    // Send welcome email on successful registration (non-blocking)
+    if (result.success && body.email) {
+      ctx.waitUntil(sendEmail(env, welcomeEmail(body.email)));
+    }
+
     return apiResponse(result, result.success ? 201 : 400);
   }
 
@@ -401,6 +422,11 @@ async function handleManagementApi(
     const result = await handleOAuthCallback(provider, env, code, redirectUri);
 
     if (result.success && result.data) {
+      // Send welcome email for new OAuth users (non-blocking)
+      if (result.data.isNewUser) {
+        ctx.waitUntil(sendEmail(env, welcomeEmail(result.data.user.email)));
+      }
+
       // Redirect to frontend with token
       const frontendUrl = env.APP_URL || url.origin;
       return Response.redirect(
@@ -1255,8 +1281,62 @@ async function handleManagementApi(
         session_duration_seconds: (user as any).session_duration_seconds || 86400,
         created_at: user.created_at,
         oauth_provider: user.oauth_provider || null,
+        scheduled_deletion_at: user.scheduled_deletion_at || null,
       },
     });
+  }
+
+  // GET /api/user/export?format=json|csv
+  if (path === '/api/user/export' && method === 'GET') {
+    const reqUrl = new URL(request.url);
+    const format = reqUrl.searchParams.get('format') || 'json';
+
+    if (format !== 'json' && format !== 'csv') {
+      return apiResponse(
+        { success: false, error: { code: 'INVALID_FORMAT', message: 'Format must be json or csv' } },
+        400
+      );
+    }
+
+    const exportData = await getUserDataForExport(env.DB, authUser.userId);
+    if (!exportData) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'User not found' } },
+        404
+      );
+    }
+
+    if (format === 'json') {
+      // Include usage logs in JSON export
+      const usageLogs = await getUsageLogsForExport(env.DB, authUser.userId);
+      const fullExport = { ...exportData, usage_logs: usageLogs };
+
+      return new Response(JSON.stringify(fullExport, null, 2), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Disposition': `attachment; filename="n8n-mcp-export-${new Date().toISOString().slice(0, 10)}.json"`,
+          ...CORS_HEADERS,
+        },
+      });
+    } else {
+      // CSV format - flatten usage logs for spreadsheet import
+      const usageLogs = await getUsageLogsForExport(env.DB, authUser.userId);
+
+      const csvHeader = 'id,user_id,api_key_id,connection_id,tool_name,status,response_time_ms,error_message,created_at\n';
+      const csvRows = usageLogs.map(log =>
+        `${log.id},${log.user_id},${log.api_key_id},${log.connection_id},${log.tool_name},${log.status},${log.response_time_ms || ''},${(log.error_message || '').replace(/,/g, ';').replace(/\n/g, ' ')},${log.created_at}`
+      ).join('\n');
+
+      return new Response(csvHeader + csvRows, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="n8n-mcp-usage-logs-${new Date().toISOString().slice(0, 10)}.csv"`,
+          ...CORS_HEADERS,
+        },
+      });
+    }
   }
 
   // PUT /api/user/session-duration
@@ -1382,12 +1462,46 @@ async function handleManagementApi(
       }
     }
 
-    // Delete user (soft delete)
-    await deleteUser(env.DB, authUser.userId);
+    // Schedule user for deletion (30-day grace period)
+    const deletionDate = await scheduleUserDeletion(env.DB, authUser.userId);
+
+    // Send confirmation email (non-blocking)
+    ctx.waitUntil(sendEmail(env, deletionScheduledEmail(user.email, deletionDate)));
 
     return apiResponse({
       success: true,
-      data: { message: 'Account deleted successfully' },
+      data: {
+        message: 'Account scheduled for deletion. You have 30 days to recover your account.',
+        scheduled_deletion_at: deletionDate,
+      },
+    });
+  }
+
+  // POST /api/user/recover (cancel scheduled deletion)
+  if (path === '/api/user/recover' && method === 'POST') {
+    const user = await getUserById(env.DB, authUser.userId);
+    if (!user) {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_FOUND', message: 'User not found' } },
+        404
+      );
+    }
+
+    if (user.status !== 'pending_deletion') {
+      return apiResponse(
+        { success: false, error: { code: 'NOT_PENDING', message: 'Account is not pending deletion' } },
+        400
+      );
+    }
+
+    await cancelUserDeletion(env.DB, authUser.userId);
+
+    // Send recovery confirmation email (non-blocking)
+    ctx.waitUntil(sendEmail(env, accountRecoveredEmail(user.email)));
+
+    return apiResponse({
+      success: true,
+      data: { message: 'Account recovered successfully. Deletion has been cancelled.' },
     });
   }
 
@@ -1646,6 +1760,8 @@ async function handleMcpRequest(
             responseTime,
             isError ? result.content[0]?.text : null
           ),
+          // Track connection activity for auto-delete feature
+          updateConnectionLastUsed(env.DB, authContext.connection.id),
         ]);
 
         // Update remaining count (only if not unlimited)
@@ -1699,7 +1815,7 @@ export default {
 
     // Management API
     if (path.startsWith('/api/')) {
-      return handleManagementApi(request, env, path);
+      return handleManagementApi(request, env, path, ctx);
     }
 
     // MCP endpoint
@@ -1741,5 +1857,59 @@ export default {
 
     // Not found
     return jsonResponse({ error: 'Not found' }, 404);
+  },
+
+  // Scheduled handler (cron trigger - daily at midnight UTC)
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log(`[CRON] Running scheduled tasks at ${new Date().toISOString()}`);
+
+    // Task 1: Delete old usage logs (90 days retention)
+    try {
+      const deletedLogs = await deleteOldUsageLogs(env.DB, 90);
+      console.log(`[CRON] Deleted ${deletedLogs} usage logs older than 90 days`);
+    } catch (error: any) {
+      console.error(`[CRON] Failed to delete old usage logs: ${error.message}`);
+    }
+
+    // Task 2: Process scheduled account deletions (30-day grace period expired)
+    try {
+      const usersToDelete = await getUsersScheduledForDeletion(env.DB);
+      console.log(`[CRON] Found ${usersToDelete.length} accounts ready for permanent deletion`);
+
+      for (const user of usersToDelete) {
+        try {
+          await hardDeleteUser(env.DB, user.id);
+          console.log(`[CRON] Permanently deleted user ${user.email} (ID: ${user.id})`);
+        } catch (err: any) {
+          console.error(`[CRON] Failed to delete user ${user.id}: ${err.message}`);
+        }
+      }
+    } catch (error: any) {
+      console.error(`[CRON] Failed to process scheduled deletions: ${error.message}`);
+    }
+
+    // Task 3: Delete inactive connections for free plan users (14 days)
+    try {
+      const inactiveConnections = await getInactiveFreePlanConnections(env.DB, 14);
+      console.log(`[CRON] Found ${inactiveConnections.length} inactive connections for free plan users`);
+
+      for (const conn of inactiveConnections) {
+        try {
+          await deleteConnection(env.DB, conn.id);
+          console.log(`[CRON] Deleted inactive connection "${conn.name}" for user ${conn.user_email}`);
+
+          // Send email notification if configured
+          if (env.RESEND_API_KEY) {
+            ctx.waitUntil(sendEmail(env, connectionDeletedEmail(conn.user_email, conn.name)));
+          }
+        } catch (err: any) {
+          console.error(`[CRON] Failed to delete connection ${conn.id}: ${err.message}`);
+        }
+      }
+    } catch (error: any) {
+      console.error(`[CRON] Failed to process inactive connections: ${error.message}`);
+    }
+
+    console.log(`[CRON] Scheduled tasks completed at ${new Date().toISOString()}`);
   },
 };

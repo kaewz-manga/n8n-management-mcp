@@ -62,6 +62,32 @@ export async function getUserByEmail(db: D1Database, email: string): Promise<Use
   return result || null;
 }
 
+// Get user by email including deleted users (for OAuth reactivation)
+export async function getUserByEmailIncludingDeleted(db: D1Database, email: string): Promise<User | null> {
+  const result = await db
+    .prepare('SELECT * FROM users WHERE email = ?')
+    .bind(email.toLowerCase())
+    .first<User>();
+
+  return result || null;
+}
+
+// Reactivate a deleted user (for OAuth login)
+export async function reactivateUser(
+  db: D1Database,
+  userId: string,
+  oauthProvider: string,
+  oauthId: string
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE users SET status = 'active', oauth_provider = ?, oauth_id = ?,
+       scheduled_deletion_at = NULL, updated_at = ? WHERE id = ?`
+    )
+    .bind(oauthProvider, oauthId, new Date().toISOString(), userId)
+    .run();
+}
+
 export async function getUserById(db: D1Database, id: string): Promise<User | null> {
   const result = await db
     .prepare('SELECT * FROM users WHERE id = ? AND status != ?')
@@ -341,6 +367,40 @@ export async function updateApiKeyLastUsed(db: D1Database, id: string): Promise<
     .prepare('UPDATE api_keys SET last_used_at = ? WHERE id = ?')
     .bind(new Date().toISOString(), id)
     .run();
+}
+
+// ============================================
+// Connection Activity Tracking
+// ============================================
+
+export async function updateConnectionLastUsed(db: D1Database, connectionId: string): Promise<void> {
+  await db
+    .prepare('UPDATE n8n_connections SET last_used_at = ? WHERE id = ?')
+    .bind(new Date().toISOString(), connectionId)
+    .run();
+}
+
+export async function getInactiveFreePlanConnections(
+  db: D1Database,
+  daysInactive: number = 14
+): Promise<{ id: string; user_id: string; name: string; user_email: string }[]> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
+
+  const result = await db
+    .prepare(`
+      SELECT c.id, c.user_id, c.name, u.email as user_email
+      FROM n8n_connections c
+      JOIN users u ON c.user_id = u.id
+      WHERE u.plan = 'free'
+        AND u.status = 'active'
+        AND c.status = 'active'
+        AND (c.last_used_at IS NULL OR c.last_used_at < ?)
+    `)
+    .bind(cutoffDate.toISOString())
+    .all<{ id: string; user_id: string; name: string; user_email: string }>();
+
+  return result.results || [];
 }
 
 export async function revokeApiKey(db: D1Database, id: string): Promise<void> {
@@ -811,6 +871,201 @@ export function getTomorrowReset(): string {
   const now = new Date();
   const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
   return tomorrow.toISOString();
+}
+
+// ============================================
+// Data Export Operations (GDPR Compliance)
+// ============================================
+
+export interface ExportData {
+  export_date: string;
+  user: {
+    id: string;
+    email: string;
+    plan: string;
+    status: string;
+    oauth_provider: string | null;
+    created_at: string;
+  };
+  connections: Array<{
+    id: string;
+    name: string;
+    n8n_url: string;
+    status: string;
+    created_at: string;
+    api_keys: Array<{
+      id: string;
+      key_prefix: string;
+      name: string;
+      status: string;
+      last_used_at: string | null;
+      created_at: string;
+    }>;
+  }>;
+  usage_monthly: Array<{
+    year_month: string;
+    request_count: number;
+    success_count: number;
+    error_count: number;
+  }>;
+  ai_connections: Array<{
+    id: string;
+    name: string;
+    provider_url: string;
+    model_name: string;
+    status: string;
+    created_at: string;
+  }>;
+  bot_connections: Array<{
+    id: string;
+    platform: string;
+    name: string;
+    webhook_url: string | null;
+    status: string;
+    created_at: string;
+  }>;
+}
+
+export async function getUserDataForExport(db: D1Database, userId: string): Promise<ExportData | null> {
+  // Get user (exclude sensitive fields)
+  const user = await db
+    .prepare('SELECT id, email, plan, status, oauth_provider, created_at FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ id: string; email: string; plan: string; status: string; oauth_provider: string | null; created_at: string }>();
+
+  if (!user) return null;
+
+  // Get connections (exclude encrypted API key)
+  const connections = await db
+    .prepare('SELECT id, name, n8n_url, status, created_at FROM n8n_connections WHERE user_id = ? AND status != ?')
+    .bind(userId, 'deleted')
+    .all<{ id: string; name: string; n8n_url: string; status: string; created_at: string }>();
+
+  // Get API keys (exclude key_hash)
+  const apiKeys = await db
+    .prepare('SELECT id, connection_id, key_prefix, name, status, last_used_at, created_at FROM api_keys WHERE user_id = ?')
+    .bind(userId)
+    .all<{ id: string; connection_id: string; key_prefix: string; name: string; status: string; last_used_at: string | null; created_at: string }>();
+
+  // Get usage monthly
+  const usageMonthly = await db
+    .prepare('SELECT year_month, request_count, success_count, error_count FROM usage_monthly WHERE user_id = ? ORDER BY year_month DESC')
+    .bind(userId)
+    .all<{ year_month: string; request_count: number; success_count: number; error_count: number }>();
+
+  // Get AI connections (exclude encrypted API key)
+  const aiConnections = await db
+    .prepare('SELECT id, name, provider_url, model_name, status, created_at FROM ai_connections WHERE user_id = ? AND status = ?')
+    .bind(userId, 'active')
+    .all<{ id: string; name: string; provider_url: string; model_name: string; status: string; created_at: string }>();
+
+  // Get bot connections (exclude encrypted tokens)
+  const botConnections = await db
+    .prepare('SELECT id, platform, name, webhook_url, status, created_at FROM bot_connections WHERE user_id = ? AND status = ?')
+    .bind(userId, 'active')
+    .all<{ id: string; platform: string; name: string; webhook_url: string | null; status: string; created_at: string }>();
+
+  // Build export data with nested API keys
+  const connectionsWithKeys = (connections.results || []).map(conn => ({
+    ...conn,
+    api_keys: (apiKeys.results || [])
+      .filter(k => k.connection_id === conn.id)
+      .map(k => ({
+        id: k.id,
+        key_prefix: k.key_prefix,
+        name: k.name,
+        status: k.status,
+        last_used_at: k.last_used_at,
+        created_at: k.created_at,
+      })),
+  }));
+
+  return {
+    export_date: new Date().toISOString(),
+    user,
+    connections: connectionsWithKeys,
+    usage_monthly: usageMonthly.results || [],
+    ai_connections: aiConnections.results || [],
+    bot_connections: botConnections.results || [],
+  };
+}
+
+export async function getUsageLogsForExport(
+  db: D1Database,
+  userId: string,
+  limit: number = 10000
+): Promise<UsageLog[]> {
+  const result = await db
+    .prepare('SELECT * FROM usage_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
+    .bind(userId, limit)
+    .all<UsageLog>();
+
+  return result.results || [];
+}
+
+// ============================================
+// Auto-delete Logs (90-day retention)
+// ============================================
+
+export async function deleteOldUsageLogs(db: D1Database, daysOld: number = 90): Promise<number> {
+  const cutoffDate = new Date(Date.now() - daysOld * 86400000).toISOString().slice(0, 10);
+  const result = await db
+    .prepare('DELETE FROM usage_logs WHERE DATE(created_at) < ?')
+    .bind(cutoffDate)
+    .run();
+
+  return result.meta.changes || 0;
+}
+
+// ============================================
+// Account Recovery (30-day grace period)
+// ============================================
+
+export async function scheduleUserDeletion(db: D1Database, userId: string): Promise<string> {
+  const deletionDate = new Date(Date.now() + 30 * 86400000).toISOString();
+  await db
+    .prepare('UPDATE users SET status = ?, scheduled_deletion_at = ?, updated_at = ? WHERE id = ?')
+    .bind('pending_deletion', deletionDate, new Date().toISOString(), userId)
+    .run();
+
+  // Revoke all API keys
+  await db
+    .prepare('UPDATE api_keys SET status = ? WHERE user_id = ?')
+    .bind('revoked', userId)
+    .run();
+
+  return deletionDate;
+}
+
+export async function cancelUserDeletion(db: D1Database, userId: string): Promise<void> {
+  await db
+    .prepare('UPDATE users SET status = ?, scheduled_deletion_at = NULL, updated_at = ? WHERE id = ?')
+    .bind('active', new Date().toISOString(), userId)
+    .run();
+
+  // Reactivate API keys (optional - user may need to regenerate)
+  // We don't reactivate to be safe
+}
+
+export async function getUsersScheduledForDeletion(db: D1Database): Promise<{ id: string; email: string }[]> {
+  const now = new Date().toISOString();
+  const result = await db
+    .prepare('SELECT id, email FROM users WHERE scheduled_deletion_at <= ? AND status = ?')
+    .bind(now, 'pending_deletion')
+    .all<{ id: string; email: string }>();
+
+  return result.results || [];
+}
+
+export async function hardDeleteUser(db: D1Database, userId: string): Promise<void> {
+  // Delete in order (respect foreign key relationships)
+  await db.prepare('DELETE FROM usage_logs WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM usage_monthly WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM api_keys WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM bot_connections WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM ai_connections WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM n8n_connections WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
 }
 
 // ============================================

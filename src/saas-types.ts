@@ -11,12 +11,13 @@ export interface User {
   email: string;
   password_hash: string;
   plan: 'free' | 'pro' | 'enterprise';
-  status: 'active' | 'suspended' | 'deleted';
+  status: 'active' | 'suspended' | 'deleted' | 'pending_deletion';
   stripe_customer_id: string | null;
   session_duration_seconds: number;
   is_admin?: number;
   oauth_provider?: string;
   oauth_id?: string;
+  scheduled_deletion_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -222,6 +223,10 @@ export interface Env {
   // Agent Secret (HMAC auth between Vercel agent and Worker)
   AGENT_SECRET?: string;
   AGENT_URL?: string;
+
+  // Email (Resend)
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;  // e.g., "n8n MCP <noreply@node2flow.net>"
 
   // Optional
   ENVIRONMENT?: 'development' | 'staging' | 'production';

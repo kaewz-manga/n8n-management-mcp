@@ -5,7 +5,7 @@
 
 import { Env, ApiResponse } from './saas-types';
 import { generateJWT, generateUUID } from './crypto-utils';
-import { createUser, getUserByEmail, getUserById } from './db';
+import { createUser, getUserByEmail, getUserByEmailIncludingDeleted, reactivateUser } from './db';
 
 // ============================================
 // OAuth Configuration
@@ -237,7 +237,7 @@ export async function handleOAuthCallback(
   env: Env,
   code: string,
   redirectUri: string
-): Promise<ApiResponse<{ token: string; user: { id: string; email: string; plan: string } }>> {
+): Promise<ApiResponse<{ token: string; user: { id: string; email: string; plan: string }; isNewUser: boolean }>> {
   // Exchange code for token
   const tokenData = await exchangeCodeForToken(provider, env, code, redirectUri);
 
@@ -267,14 +267,31 @@ export async function handleOAuthCallback(
     };
   }
 
-  // Check if user exists
+  // Check if user exists (excluding deleted)
   let user = await getUserByEmail(env.DB, userInfo.email);
+  let isNewUser = false;
 
   if (!user) {
-    // Create new user (no password for OAuth users)
-    // Generate a random "password hash" that can never be used for login
-    const randomHash = `oauth_${provider}_${generateUUID()}`;
-    user = await createUser(env.DB, userInfo.email, randomHash, provider, userInfo.id);
+    // Check if a deleted user exists with this email
+    const deletedUser = await getUserByEmailIncludingDeleted(env.DB, userInfo.email);
+
+    if (deletedUser) {
+      // Reactivate the deleted user
+      await reactivateUser(env.DB, deletedUser.id, provider, userInfo.id);
+      user = {
+        ...deletedUser,
+        status: 'active',
+        oauth_provider: provider,
+        oauth_id: userInfo.id,
+        scheduled_deletion_at: null,
+      };
+    } else {
+      // Create new user (no password for OAuth users)
+      // Generate a random "password hash" that can never be used for login
+      const randomHash = `oauth_${provider}_${generateUUID()}`;
+      user = await createUser(env.DB, userInfo.email, randomHash, provider, userInfo.id);
+      isNewUser = true;
+    }
   } else if (!user.oauth_provider) {
     // Update existing user with OAuth info (for users who registered with email first)
     await env.DB
@@ -285,13 +302,13 @@ export async function handleOAuthCallback(
     user.oauth_id = userInfo.id;
   }
 
-  // Check if user is active
-  if (user.status !== 'active') {
+  // Check if user is suspended (not deleted, since we reactivate those)
+  if (user.status === 'suspended') {
     return {
       success: false,
       error: {
         code: 'ACCOUNT_SUSPENDED',
-        message: 'Account is suspended or deleted',
+        message: 'Account is suspended',
       },
     };
   }
@@ -317,6 +334,7 @@ export async function handleOAuthCallback(
         email: user.email,
         plan: user.plan,
       },
+      isNewUser,
     },
   };
 }

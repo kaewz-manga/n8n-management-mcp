@@ -38,7 +38,52 @@ It connects to this Worker via:
 
 ## สถานะปัจจุบัน (2026-02-05)
 
-### ✅ ล่าสุด (2026-02-05)
+### ✅ ล่าสุด (2026-02-05 - Session 2)
+
+**4 Priority Features (~660 lines added)**:
+
+1. **Data Export (GDPR)** - Export user data as JSON or CSV
+   - `GET /api/user/export?format=json|csv` endpoint
+   - Exports: profile, connections, api_keys metadata, usage_logs, ai_connections, bot_connections
+   - Excludes: password_hash, encrypted keys/secrets
+   - Dashboard: Export buttons in Settings page
+
+2. **Account Recovery (30-day grace period)**
+   - `DELETE /api/user` now schedules deletion instead of immediate soft delete
+   - `POST /api/user/recover` to cancel scheduled deletion
+   - Migration: `migrations/006_scheduled_deletion.sql` adds `scheduled_deletion_at` column
+   - Dashboard: Recovery banner in Settings page when pending deletion
+
+3. **Auto-delete Logs (90-day retention)**
+   - Cloudflare Cron Trigger: `0 0 * * *` (daily at midnight UTC)
+   - Deletes `usage_logs` older than 90 days
+   - Processes expired account deletions (30-day grace period)
+   - `wrangler.toml` updated with `[triggers]` section
+
+4. **Email Notifications (Resend)**
+   - `src/email.ts` - Resend integration + 4 email templates
+   - Welcome email on registration (email + OAuth)
+   - Deletion scheduled email
+   - Account recovered email
+   - Usage limit warning email (80% of daily limit)
+   - Secrets needed: `RESEND_API_KEY`, `EMAIL_FROM`
+
+**New Files**:
+- `src/email.ts` - Email service module (~250 lines)
+- `migrations/006_scheduled_deletion.sql` - Add scheduled_deletion_at column
+
+**Modified Files**:
+- `src/index.ts` - Added scheduled handler, export/recover endpoints, email triggers
+- `src/db.ts` - Added 8 new functions for export, cleanup, recovery
+- `src/oauth.ts` - Added isNewUser flag for welcome email
+- `src/saas-types.ts` - Added RESEND_API_KEY, EMAIL_FROM, scheduled_deletion_at
+- `wrangler.toml` - Added cron trigger
+- `dashboard/src/pages/Settings.tsx` - Export buttons, recovery banner
+- `dashboard/src/lib/api.ts` - Export and recover API functions
+
+---
+
+### ✅ ก่อนหน้า (2026-02-05 - Session 1)
 
 **Dashboard Public Pages (~2,400 lines added)**:
 - **Brand Name Fix** - เปลี่ยน "n8n MCP" เป็น "n8n Management MCP" ทุกที่ใน Landing page
@@ -509,13 +554,24 @@ d3dcb23 fix: simplify delete account flow for OAuth users
 
 ## Next Steps
 
-### Priority 1: Dashboard Enhancements
-- **Data Export** - ให้ผู้ใช้ export ข้อมูลของตัวเองเป็น JSON/CSV
-- **Auto-delete Logs** - ลบ usage logs เก่าอัตโนมัติ (90 วัน)
-- **Account Recovery** - เพิ่ม grace period 30 วันก่อนลบบัญชีถาวร
-- **Email Notifications** - แจ้งเตือนเมื่อใกล้ถึง usage limit
+### ✅ Priority 1: Dashboard Enhancements (COMPLETED 2026-02-05)
+- ~~**Data Export** - ให้ผู้ใช้ export ข้อมูลของตัวเองเป็น JSON/CSV~~
+- ~~**Auto-delete Logs** - ลบ usage logs เก่าอัตโนมัติ (90 วัน)~~
+- ~~**Account Recovery** - เพิ่ม grace period 30 วันก่อนลบบัญชีถาวร~~
+- ~~**Email Notifications** - แจ้งเตือนเมื่อใกล้ถึง usage limit~~
 
-### Priority 2: Dashboard Testing
+### ⏳ รอ set secrets (Email)
+```bash
+wrangler secret put RESEND_API_KEY
+wrangler secret put EMAIL_FROM   # e.g., "n8n MCP <noreply@node2flow.net>"
+```
+
+### ⏳ รอ apply migration
+```bash
+npx wrangler d1 execute n8n-management-mcp-db --remote --file=./migrations/006_scheduled_deletion.sql
+```
+
+### Priority 1: Dashboard Testing
 - ทดสอบ n8n-mcp-agent Dashboard CRUD ให้ครบ (login เข้าได้แล้ว)
 - AI connections create/delete
 - Bot connections + webhook toggle
@@ -533,14 +589,15 @@ d3dcb23 fix: simplify delete account flow for OAuth users
 
 | Priority | File | Description |
 |----------|------|-------------|
-| 1 | `src/index.ts` | Main entry point - all API routes + MCP handler |
+| 1 | `src/index.ts` | Main entry point - all API routes + MCP handler + scheduled |
 | 2 | `src/auth.ts` | Auth flow - register, login, API key validation |
 | 3 | `src/oauth.ts` | GitHub + Google OAuth flow (~330 lines) |
-| 4 | `src/db.ts` | Database layer - all CRUD operations |
-| 5 | `src/stripe.ts` | Stripe billing - checkout, portal, webhooks |
-| 6 | `schema.sql` | D1 database schema |
-| 7 | `docs/DEPLOYMENT.md` | Full deployment guide (11 steps) |
-| 8 | `dashboard/src/lib/api.ts` | Frontend API client |
+| 4 | `src/db.ts` | Database layer - all CRUD + export/recovery functions |
+| 5 | `src/email.ts` | Resend email service + templates (NEW) |
+| 6 | `src/stripe.ts` | Stripe billing - checkout, portal, webhooks |
+| 7 | `schema.sql` | D1 database schema |
+| 8 | `docs/DEPLOYMENT.md` | Full deployment guide (11 steps) |
+| 9 | `dashboard/src/lib/api.ts` | Frontend API client |
 
 ### New Public Pages (2026-02-05)
 

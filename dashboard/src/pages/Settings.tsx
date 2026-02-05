@@ -9,9 +9,11 @@ import {
   enableTOTP,
   disableTOTP,
   getTOTPStatus,
+  exportUserData,
+  recoverAccount,
   type TOTPSetupData,
 } from '../lib/api';
-import { User, Mail, Shield, Trash2, Loader2, Check, AlertCircle, X, Clock, Smartphone, QrCode, Copy, CheckCircle } from 'lucide-react';
+import { User, Mail, Shield, Trash2, Loader2, Check, AlertCircle, X, Clock, Smartphone, QrCode, Copy, CheckCircle, Download, FileJson, FileSpreadsheet, RotateCcw } from 'lucide-react';
 
 const SESSION_OPTIONS = [
   { value: 3600, label: '1 hour' },
@@ -56,7 +58,18 @@ export default function Settings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
+  // Data export state
+  const [exportLoading, setExportLoading] = useState<'json' | 'csv' | null>(null);
+  const [exportError, setExportError] = useState('');
+  const [exportSuccess, setExportSuccess] = useState('');
+
+  // Account recovery state
+  const [recoverLoading, setRecoverLoading] = useState(false);
+  const [recoverError, setRecoverError] = useState('');
+
   const isOAuthUser = !!user?.oauth_provider;
+  const isPendingDeletion = user?.status === 'pending_deletion';
+  const scheduledDeletionAt = (user as any)?.scheduled_deletion_at;
 
   // Load TOTP status on mount
   useEffect(() => {
@@ -226,6 +239,49 @@ export default function Settings() {
     });
   };
 
+  const handleExport = async (format: 'json' | 'csv') => {
+    setExportLoading(format);
+    setExportError('');
+    setExportSuccess('');
+
+    try {
+      const blob = await exportUserData(format);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `n8n-mcp-export-${new Date().toISOString().slice(0, 10)}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      setExportSuccess(`Data exported as ${format.toUpperCase()} successfully!`);
+      setTimeout(() => setExportSuccess(''), 3000);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Failed to export data');
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
+  const handleRecoverAccount = async () => {
+    setRecoverLoading(true);
+    setRecoverError('');
+
+    try {
+      const res = await recoverAccount();
+      if (res.success) {
+        await refreshUser();
+      } else {
+        setRecoverError(res.error?.message || 'Failed to recover account');
+      }
+    } catch (err) {
+      setRecoverError(err instanceof Error ? err.message : 'Failed to recover account');
+    } finally {
+      setRecoverLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-2xl">
       {/* Header */}
@@ -233,6 +289,43 @@ export default function Settings() {
         <h1 className="text-2xl font-bold text-n2f-text">Settings</h1>
         <p className="text-n2f-text-secondary mt-1">Manage your account settings</p>
       </div>
+
+      {/* Account Recovery Banner */}
+      {isPendingDeletion && scheduledDeletionAt && (
+        <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-300">Account Scheduled for Deletion</h3>
+              <p className="text-sm text-amber-200/80 mt-1">
+                Your account is scheduled to be permanently deleted on{' '}
+                <strong>{new Date(scheduledDeletionAt).toLocaleDateString()}</strong>.
+                All your data, connections, and API keys will be removed.
+              </p>
+              {recoverError && (
+                <div className="text-red-400 text-sm mt-2">{recoverError}</div>
+              )}
+              <button
+                onClick={handleRecoverAccount}
+                disabled={recoverLoading}
+                className="mt-3 inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {recoverLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Recovering...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4" />
+                    Cancel Deletion & Recover Account
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Profile Section */}
       <div className="card">
@@ -577,6 +670,67 @@ export default function Settings() {
 
         <p className="text-xs text-n2f-text-secondary mt-3">
           Replace YOUR_API_KEY with the API key from your connection.
+        </p>
+      </div>
+
+      {/* Data Export Section */}
+      <div className="card">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-900/30 rounded-lg">
+            <Download className="h-5 w-5 text-blue-400" />
+          </div>
+          <h2 className="text-lg font-semibold text-n2f-text">Export Your Data</h2>
+        </div>
+
+        <p className="text-sm text-n2f-text-secondary mb-4">
+          Download a copy of your data for backup or data portability purposes (GDPR compliant).
+          This includes your profile, connections, API keys metadata, usage history, and integrations.
+        </p>
+
+        {exportSuccess && (
+          <div className="bg-emerald-900/30 border border-emerald-700 text-emerald-400 px-3 py-2 rounded-lg text-sm mb-4 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            {exportSuccess}
+          </div>
+        )}
+
+        {exportError && (
+          <div className="bg-red-900/30 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm mb-4 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {exportError}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => handleExport('json')}
+            disabled={exportLoading !== null}
+            className="btn-secondary inline-flex items-center gap-2"
+          >
+            {exportLoading === 'json' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileJson className="h-4 w-4" />
+            )}
+            Export as JSON
+          </button>
+
+          <button
+            onClick={() => handleExport('csv')}
+            disabled={exportLoading !== null}
+            className="btn-secondary inline-flex items-center gap-2"
+          >
+            {exportLoading === 'csv' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            Export Usage Logs as CSV
+          </button>
+        </div>
+
+        <p className="text-xs text-n2f-text-muted mt-3">
+          Note: Encrypted credentials and API key secrets are not included in exports for security.
         </p>
       </div>
 
