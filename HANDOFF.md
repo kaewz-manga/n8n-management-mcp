@@ -38,7 +38,37 @@ It connects to this Worker via:
 
 ## สถานะปัจจุบัน (2026-02-05)
 
-### ✅ ล่าสุด (2026-02-05 - Session 2)
+### ✅ ล่าสุด (2026-02-05 - Session 3)
+
+**Data Lifecycle Features (~400 lines added)**:
+
+1. **Free Plan Connection Auto-Delete (14 days)**
+   - Migration: `migrations/007_connection_last_used.sql` - adds `last_used_at` column
+   - `updateConnectionLastUsed()` - tracks activity on each MCP tool call
+   - `getInactiveFreePlanConnections()` - finds connections inactive for 14+ days
+   - Scheduled Task 3 in cron handler - deletes inactive connections daily
+   - `connectionDeletedEmail()` - notifies user when connection is removed
+   - **Only affects Free plan** - Pro/Enterprise connections never auto-deleted
+
+2. **OAuth Reactivation Fix**
+   - Bug: Deleted users couldn't re-register via OAuth (UNIQUE constraint on email)
+   - Fix: `getUserByEmailIncludingDeleted()` + `reactivateUser()` in db.ts
+   - OAuth callback now reactivates deleted accounts instead of failing
+
+**New Files**:
+- `migrations/007_connection_last_used.sql` - Add last_used_at + index
+
+**Modified Files**:
+- `src/db.ts` - Added 4 functions (updateConnectionLastUsed, getInactiveFreePlanConnections, getUserByEmailIncludingDeleted, reactivateUser)
+- `src/index.ts` - Added updateConnectionLastUsed to MCP handler, Task 3 to scheduled handler
+- `src/oauth.ts` - Handle deleted user reactivation
+- `src/email.ts` - Added connectionDeletedEmail template
+
+**Commit**: `57602c0` - feat: add data lifecycle management features
+
+---
+
+### ✅ ก่อนหน้า (2026-02-05 - Session 2)
 
 **4 Priority Features (~660 lines added)**:
 
@@ -397,8 +427,8 @@ n8n-management-mcp/
 
 | Table | Key Fields |
 |-------|------------|
-| **users** | id, email, password_hash, oauth_provider, oauth_id, plan, status, stripe_customer_id, is_admin |
-| **n8n_connections** | id, user_id, name, n8n_url, n8n_api_key_encrypted, status |
+| **users** | id, email, password_hash, oauth_provider, oauth_id, plan, status, stripe_customer_id, is_admin, scheduled_deletion_at |
+| **n8n_connections** | id, user_id, name, n8n_url, n8n_api_key_encrypted, status, last_used_at |
 | **api_keys** | id, user_id, connection_id, key_hash (SHA-256), key_prefix, status |
 | **usage_logs** | id, user_id, api_key_id, connection_id, tool_name, status, response_time_ms |
 | **usage_monthly** | id, user_id, year_month, request_count, success_count, error_count |
@@ -530,6 +560,9 @@ Claude Desktop config:
 ## Git History (Key Commits)
 
 ```
+# 2026-02-05 (Data Lifecycle Features)
+57602c0 feat: add data lifecycle management features
+
 # 2026-02-05 (Dashboard Public Pages)
 aea14ae feat: add Status page with real-time health monitoring
 6699a69 feat: add Documentation page with tabbed interface
@@ -554,22 +587,21 @@ d3dcb23 fix: simplify delete account flow for OAuth users
 
 ## Next Steps
 
-### ✅ Priority 1: Dashboard Enhancements (COMPLETED 2026-02-05)
+### ✅ Priority 1: Data Lifecycle Features (COMPLETED 2026-02-05)
 - ~~**Data Export** - ให้ผู้ใช้ export ข้อมูลของตัวเองเป็น JSON/CSV~~
 - ~~**Auto-delete Logs** - ลบ usage logs เก่าอัตโนมัติ (90 วัน)~~
 - ~~**Account Recovery** - เพิ่ม grace period 30 วันก่อนลบบัญชีถาวร~~
 - ~~**Email Notifications** - แจ้งเตือนเมื่อใกล้ถึง usage limit~~
+- ~~**Free Plan Connection Cleanup** - Auto-delete inactive connections (14 days)~~
+- ~~**OAuth Reactivation** - Deleted users can re-login via OAuth~~
 
-### ⏳ รอ set secrets (Email)
-```bash
-wrangler secret put RESEND_API_KEY
-wrangler secret put EMAIL_FROM   # e.g., "n8n MCP <noreply@node2flow.net>"
-```
+### ✅ Migrations Applied
+- `migrations/006_scheduled_deletion.sql` - scheduled_deletion_at column
+- `migrations/007_connection_last_used.sql` - last_used_at column
 
-### ⏳ รอ apply migration
-```bash
-npx wrangler d1 execute n8n-management-mcp-db --remote --file=./migrations/006_scheduled_deletion.sql
-```
+### ✅ Email Secrets Set
+- `RESEND_API_KEY` - Resend API key
+- `EMAIL_FROM` - "Node2flow <noreply@node2flow.net>"
 
 ### Priority 1: Dashboard Testing
 - ทดสอบ n8n-mcp-agent Dashboard CRUD ให้ครบ (login เข้าได้แล้ว)
