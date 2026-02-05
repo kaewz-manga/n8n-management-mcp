@@ -38,7 +38,27 @@ It connects to this Worker via:
 
 ## สถานะปัจจุบัน (2026-02-05)
 
-### ✅ ล่าสุด (2026-02-05 - Session 3)
+### ✅ ล่าสุด (2026-02-05 - Session 4)
+
+**Deployment + Config Updates**:
+
+1. **Deployed to Production**
+   - Worker: `a0946cb9-d81f-46e4-afac-9af021c11744`
+   - Dashboard: `f4069449.n8n-mcp-dashboard.pages.dev`
+   - All health checks passed
+
+2. **Windows MCP Config**
+   - Changed `.mcp.json` commands to Windows format (`cmd /c npx`)
+   - Added `sqlite`, `n8n-mcp`, `n8n-mcp-remote` servers
+
+3. **Updated .gitignore**
+   - Added `*.db`, `API_TEST_REPORT*.txt`, `*.png`
+
+**Commit**: `d77af66` - chore: update .mcp.json for Windows + add .gitignore entries
+
+---
+
+### ✅ ก่อนหน้า (2026-02-05 - Session 3)
 
 **Data Lifecycle Features (~400 lines added)**:
 
@@ -563,10 +583,13 @@ Claude Desktop config:
 ## Git History (Key Commits)
 
 ```
-# 2026-02-05 (Data Lifecycle Features)
+# 2026-02-05 (Session 4 - Deployment)
+d77af66 chore: update .mcp.json for Windows + add .gitignore entries
+
+# 2026-02-05 (Session 3 - Data Lifecycle Features)
 57602c0 feat: add data lifecycle management features
 
-# 2026-02-05 (Dashboard Public Pages)
+# 2026-02-05 (Session 1-2 - Dashboard Public Pages)
 aea14ae feat: add Status page with real-time health monitoring
 6699a69 feat: add Documentation page with tabbed interface
 d3553b8 feat: add FAQ page with searchable accordion UI
