@@ -183,13 +183,16 @@ It connects to this Worker via:
 - OAuth `redirect_uri` ใช้ `APP_URL` (Dashboard) แทน Worker origin → Fixed (commit 02fd3fa)
 - Dashboard ส่ง `redirect_uri` ผิด override Worker's callback → Fixed (commit 02fd3fa)
 
+### ✅ Main Dashboard API Testing (2026-02-05)
+- 14/14 endpoints tested and passed
+- Registration, Login, Profile, Connections, Usage, Export, OAuth all working
+- Account deletion (30-day grace) and recovery working
+
 ### ⏳ ยังไม่ได้ทดสอบละเอียด
 
-- **n8n-mcp-agent Dashboard CRUD** - Login เข้าได้แล้ว แต่ยังไม่ได้ตรวจสอบ CRUD operations ทั้งหมด
+- **n8n-mcp-agent (Vercel)** - Chat UI + AI/Bot connections
   - AI connections create/delete
   - Bot connections create/delete + webhook toggle
-  - n8n connections + API key management
-  - OAuth full flow (GitHub/Google redirect → callback → dashboard)
 - **Stripe billing** - Integration code ready แต่ยัง set secrets ไม่ครบ
 
 ### ⏳ รอ set secrets (ต้องทำ manual)
@@ -603,12 +606,22 @@ d3dcb23 fix: simplify delete account flow for OAuth users
 - `RESEND_API_KEY` - Resend API key
 - `EMAIL_FROM` - "Node2flow <noreply@node2flow.net>"
 
-### Priority 1: Dashboard Testing
-- ทดสอบ n8n-mcp-agent Dashboard CRUD ให้ครบ (login เข้าได้แล้ว)
+### ✅ Dashboard API Testing (COMPLETED 2026-02-05)
+14/14 endpoints tested and passed:
+- ~~Registration + Login~~ ✅
+- ~~JWT authentication~~ ✅
+- ~~Profile management~~ ✅
+- ~~Connections CRUD~~ ✅ (validates n8n URL)
+- ~~Usage tracking~~ ✅
+- ~~Data Export (JSON/CSV)~~ ✅
+- ~~Account deletion (30-day grace)~~ ✅
+- ~~Account recovery~~ ✅
+- ~~OAuth providers (GitHub/Google)~~ ✅
+
+### ⏳ Remaining: n8n-mcp-agent Testing
 - AI connections create/delete
 - Bot connections + webhook toggle
-- n8n connections + API keys
-- OAuth full flow
+- Chat UI functionality
 
 ### Priority 3: Billing & Production
 - Set Stripe secrets → `wrangler secret put` (ดู DEPLOYMENT.md Step 10)
