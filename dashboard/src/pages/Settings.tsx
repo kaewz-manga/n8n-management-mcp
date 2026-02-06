@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSudoContext } from '../contexts/SudoContext';
 import {
@@ -77,7 +76,7 @@ export default function Settings() {
   const [forceDeleteLoading, setForceDeleteLoading] = useState(false);
   const [forceDeleteError, setForceDeleteError] = useState('');
 
-  const navigate = useNavigate();
+
 
   const isOAuthUser = !!user?.oauth_provider;
   const isPendingDeletion = user?.status === 'pending_deletion';
@@ -269,7 +268,7 @@ export default function Settings() {
 
       if (res.success) {
         clearToken();
-        navigate('/account-deleted');
+        window.location.href = '/account-deleted';
       } else {
         setForceDeleteError(res.error?.message || 'Failed to delete account');
       }
@@ -281,7 +280,7 @@ export default function Settings() {
 
     if (res.success) {
       clearToken();
-      navigate('/account-deleted');
+      window.location.href = '/account-deleted';
     } else {
       setForceDeleteError(res.error?.message || 'Failed to delete account');
     }
