@@ -1,29 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Zap, ArrowLeft, Shield, Database, Lock, Globe, Trash2, Mail } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Privacy() {
-  return (
-    <div className="min-h-screen bg-n2f-bg">
-      {/* Header */}
-      <header className="border-b border-n2f-border sticky top-0 bg-n2f-bg/95 backdrop-blur z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="bg-n2f-accent p-2 rounded-lg">
-                <Zap className="h-5 w-5 text-gray-900" />
-              </div>
-              <span className="text-xl font-bold text-n2f-text">n8n Management MCP</span>
-            </Link>
-            <Link to="/" className="text-n2f-text-secondary hover:text-n2f-text flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
+  const { user } = useAuth();
 
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  const content = (
+    <>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-n2f-text mb-2">Privacy Policy</h1>
           <p className="text-n2f-text-muted">Last updated: February 5, 2026</p>
@@ -397,14 +380,43 @@ export default function Privacy() {
         </div>
 
         {/* Footer navigation */}
-        <div className="mt-12 pt-8 border-t border-n2f-border flex justify-between">
-          <Link to="/terms" className="text-n2f-accent hover:underline">
-            ← Terms of Service
-          </Link>
-          <Link to="/" className="text-n2f-accent hover:underline">
-            Back to Home →
-          </Link>
+        {!user && (
+          <div className="mt-12 pt-8 border-t border-n2f-border flex justify-between">
+            <Link to="/terms" className="text-n2f-accent hover:underline">
+              ← Terms of Service
+            </Link>
+            <Link to="/" className="text-n2f-accent hover:underline">
+              Back to Home →
+            </Link>
+          </div>
+        )}
+    </>
+  );
+
+  if (user) {
+    return <div className="space-y-6">{content}</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-n2f-bg">
+      <header className="border-b border-n2f-border sticky top-0 bg-n2f-bg/95 backdrop-blur z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="bg-n2f-accent p-2 rounded-lg">
+                <Zap className="h-5 w-5 text-gray-900" />
+              </div>
+              <span className="text-xl font-bold text-n2f-text">n8n Management MCP</span>
+            </Link>
+            <Link to="/" className="text-n2f-text-secondary hover:text-n2f-text flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Link>
+          </div>
         </div>
+      </header>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {content}
       </main>
     </div>
   );

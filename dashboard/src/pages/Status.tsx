@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Zap,
   ArrowLeft,
@@ -164,6 +165,7 @@ function IncidentCard({ incident }: { incident: Incident }) {
 }
 
 export default function Status() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -273,34 +275,14 @@ export default function Status() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-n2f-bg flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-64">
         <Loader2 className="h-8 w-8 animate-spin text-n2f-accent" />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-n2f-bg">
-      {/* Header */}
-      <header className="border-b border-n2f-border sticky top-0 bg-n2f-bg/95 backdrop-blur z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="bg-n2f-accent p-2 rounded-lg">
-                <Zap className="h-5 w-5 text-gray-900" />
-              </div>
-              <span className="text-xl font-bold text-n2f-text">n8n Management MCP</span>
-            </Link>
-            <Link to="/" className="text-n2f-text-secondary hover:text-n2f-text flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  const content = (
+    <>
         {/* Overall Status */}
         <div className={`rounded-xl p-8 mb-8 ${
           overallStatus === 'operational' ? 'bg-green-900/20 border border-green-800' :
@@ -430,18 +412,47 @@ export default function Status() {
         </section>
 
         {/* Footer */}
-        <div className="mt-12 pt-8 border-t border-n2f-border flex flex-wrap justify-between gap-4 text-sm">
-          <div className="flex gap-4">
-            <Link to="/docs" className="text-n2f-accent hover:underline">Documentation</Link>
-            <Link to="/faq" className="text-n2f-accent hover:underline">FAQ</Link>
+        {!user && (
+          <div className="mt-12 pt-8 border-t border-n2f-border flex flex-wrap justify-between gap-4 text-sm">
+            <div className="flex gap-4">
+              <Link to="/docs" className="text-n2f-accent hover:underline">Documentation</Link>
+              <Link to="/faq" className="text-n2f-accent hover:underline">FAQ</Link>
+            </div>
+            <a
+              href="mailto:support@node2flow.net"
+              className="text-n2f-accent hover:underline"
+            >
+              Report an Issue
+            </a>
           </div>
-          <a
-            href="mailto:support@node2flow.net"
-            className="text-n2f-accent hover:underline"
-          >
-            Report an Issue
-          </a>
+        )}
+    </>
+  );
+
+  if (user) {
+    return <div className="space-y-6">{content}</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-n2f-bg">
+      <header className="border-b border-n2f-border sticky top-0 bg-n2f-bg/95 backdrop-blur z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="bg-n2f-accent p-2 rounded-lg">
+                <Zap className="h-5 w-5 text-gray-900" />
+              </div>
+              <span className="text-xl font-bold text-n2f-text">n8n Management MCP</span>
+            </Link>
+            <Link to="/" className="text-n2f-text-secondary hover:text-n2f-text flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Link>
+          </div>
         </div>
+      </header>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {content}
       </main>
     </div>
   );

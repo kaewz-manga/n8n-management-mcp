@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Zap,
   ArrowLeft,
@@ -135,6 +136,7 @@ function TabButton({ id, label, icon, active, onClick }: {
 }
 
 export default function Documentation() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('quickstart');
   const [toolFilter, setToolFilter] = useState('');
 
@@ -162,28 +164,8 @@ export default function Documentation() {
     Utility: <Terminal className="h-4 w-4" />,
   };
 
-  return (
-    <div className="min-h-screen bg-n2f-bg">
-      {/* Header */}
-      <header className="border-b border-n2f-border sticky top-0 bg-n2f-bg/95 backdrop-blur z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="bg-n2f-accent p-2 rounded-lg">
-                <Zap className="h-5 w-5 text-gray-900" />
-              </div>
-              <span className="text-xl font-bold text-n2f-text">n8n Management MCP</span>
-            </Link>
-            <Link to="/" className="text-n2f-text-secondary hover:text-n2f-text flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  const content = (
+    <>
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-n2f-accent/10 p-3 rounded-lg">
             <Book className="h-6 w-6 text-n2f-accent" />
@@ -707,16 +689,45 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx`}
         </div>
 
         {/* Footer navigation */}
-        <div className="mt-12 pt-8 border-t border-n2f-border flex flex-wrap justify-between gap-4 text-sm">
-          <div className="flex gap-4">
-            <Link to="/faq" className="text-n2f-accent hover:underline">FAQ</Link>
-            <Link to="/terms" className="text-n2f-accent hover:underline">Terms</Link>
-            <Link to="/privacy" className="text-n2f-accent hover:underline">Privacy</Link>
+        {!user && (
+          <div className="mt-12 pt-8 border-t border-n2f-border flex flex-wrap justify-between gap-4 text-sm">
+            <div className="flex gap-4">
+              <Link to="/faq" className="text-n2f-accent hover:underline">FAQ</Link>
+              <Link to="/terms" className="text-n2f-accent hover:underline">Terms</Link>
+              <Link to="/privacy" className="text-n2f-accent hover:underline">Privacy</Link>
+            </div>
+            <Link to="/" className="text-n2f-accent hover:underline">
+              Back to Home →
+            </Link>
           </div>
-          <Link to="/" className="text-n2f-accent hover:underline">
-            Back to Home →
-          </Link>
+        )}
+    </>
+  );
+
+  if (user) {
+    return <div className="space-y-6">{content}</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-n2f-bg">
+      <header className="border-b border-n2f-border sticky top-0 bg-n2f-bg/95 backdrop-blur z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="bg-n2f-accent p-2 rounded-lg">
+                <Zap className="h-5 w-5 text-gray-900" />
+              </div>
+              <span className="text-xl font-bold text-n2f-text">n8n Management MCP</span>
+            </Link>
+            <Link to="/" className="text-n2f-text-secondary hover:text-n2f-text flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Link>
+          </div>
         </div>
+      </header>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {content}
       </main>
     </div>
   );

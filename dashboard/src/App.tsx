@@ -70,6 +70,25 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Smart Route wrapper (shows Layout if logged in, standalone if not)
+function SmartRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-n2f-accent" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Layout>{children}</Layout>;
+  }
+
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -92,12 +111,12 @@ function AppRoutes() {
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Legal pages - public, no redirect if logged in */}
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/faq" element={<FAQ />} />
-      <Route path="/docs" element={<Documentation />} />
-      <Route path="/status" element={<Status />} />
+      {/* Info pages - with Layout if logged in, standalone if not */}
+      <Route path="/terms" element={<SmartRoute><Terms /></SmartRoute>} />
+      <Route path="/privacy" element={<SmartRoute><Privacy /></SmartRoute>} />
+      <Route path="/faq" element={<SmartRoute><FAQ /></SmartRoute>} />
+      <Route path="/docs" element={<SmartRoute><Documentation /></SmartRoute>} />
+      <Route path="/status" element={<SmartRoute><Status /></SmartRoute>} />
 
       {/* Protected routes */}
       <Route
