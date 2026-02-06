@@ -43,6 +43,9 @@ export default function Connections() {
 
   // Copy state
   const [copied, setCopied] = useState(false);
+  const [copiedMcp, setCopiedMcp] = useState(false);
+
+  const mcpUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/mcp`;
 
   const fetchConnections = async () => {
     setLoading(true);
@@ -181,6 +184,28 @@ export default function Connections() {
         <button onClick={() => setShowAddModal(true)} className="btn-primary">
           <Plus className="h-4 w-4 mr-2" />
           Add Connection
+        </button>
+      </div>
+
+      {/* MCP URL */}
+      <div className="bg-n2f-card border border-n2f-border rounded-lg p-4 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-n2f-text-secondary">MCP Endpoint</p>
+          <code className="text-sm font-mono text-n2f-text break-all">{mcpUrl}</code>
+        </div>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(mcpUrl);
+            setCopiedMcp(true);
+            setTimeout(() => setCopiedMcp(false), 2000);
+          }}
+          className="btn-secondary shrink-0 py-2 px-3"
+        >
+          {copiedMcp ? (
+            <><Check className="h-4 w-4 text-emerald-400 mr-1" /> Copied</>
+          ) : (
+            <><Copy className="h-4 w-4 mr-1" /> Copy URL</>
+          )}
         </button>
       </div>
 
