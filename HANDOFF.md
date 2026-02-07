@@ -2,7 +2,7 @@
 
 > Context สำหรับ Claude ตัวใหม่ที่จะทำงานต่อ
 
-**Updated**: 2026-02-08
+**Updated**: 2026-02-07
 **GitHub**: https://github.com/kaewz-manga/n8n-management-mcp
 
 ### Production URLs
@@ -27,12 +27,15 @@
 |---------|------|---------|
 | **n8n-mcp-agent** | Moved to separate repo | Next.js 15 Chat UI + Dashboard frontend (Vercel) |
 | **n8n-management-mcp** | This repo | CF Worker backend (API + MCP + D1) |
+| **Node2Flow Platform** | Separate repo (Node2Flow-MCP-service) | New platform, fully independent, no shared resources |
 
 The **n8n-mcp-agent** project has been **moved out** to a separate repository (previously in `agent/` folder).
 It connects to this Worker via:
 - HMAC-SHA256 for AI/bot configs (`/api/agent/config`, `/api/agent/bot-config`)
 - JWT for dashboard CRUD
 - `n2f_` API key for MCP tools
+
+**Node2Flow Platform** is a separate system with its own DB, KV, secrets, and users. No data is shared between the two systems.
 
 ---
 
@@ -414,9 +417,12 @@ It connects to this Worker via:
 |----------|---------|------|
 | **Worker** | n8n-mcp-saas | Cloudflare Workers |
 | **D1 Database** | `705840e0-4663-430e-9f3b-3778c209e525` | n8n-mcp-saas-db (APAC/SIN) |
-| **KV Namespace** | `45d5d994b649440ab34e4f0a3a5eaa66` | RATE_LIMIT_KV |
+| **KV Namespace** | `45d5d994b649440ab34e4f0a3a5eaa66` | RATE_LIMIT_KV (dedicated, not shared) |
 | **Pages** | n8n-mcp-dashboard | Cloudflare Pages |
 | **Account ID** | `ed77f292a2c8173c4fbadebcd1fbe8fc` | Cloudflare Account |
+
+> **Note**: KV namespace ไม่ได้ share กับ Node2Flow Platform แล้ว (แยก 2026-02-07)
+> Node2Flow ใช้ KV ของตัวเอง: `9a87f5a1d2a7413dba6f022976b7b874`
 
 ### Secrets ที่ set แล้วบน Workers
 
@@ -777,6 +783,9 @@ Claude Desktop config:
 ## Git History (Key Commits)
 
 ```
+# 2026-02-07 (Session 8 - Cleanup)
+dd3c3b2 docs: add platform plan and admin system controls plan
+
 # 2026-02-08 (Session 7 - Admin System Controls)
 710a3f9 feat: add copy MCP URL button on connections page
 10409f2 feat: add admin system controls (maintenance, recalculate, clear, reset)
